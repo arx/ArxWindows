@@ -1,4 +1,4 @@
-## ArxDependencies - Prebuilt libraries for ArxFatalis under Windows
+## ArxDependencies - Prebuilt libraries for Arx Libertatis under Windows
 
 This repository contains everything that you need to build the game in both 32-bit and 64-bit under Windows.
 
@@ -25,9 +25,9 @@ This repository contains everything that you need to build the game in both 32-b
 2. Add the following environment variable:
 
         CMAKE_PREFIX_PATH
-and set it's value to
+and set its value to
 
-        E:\git\ArxDependencies\zlib;E:\git\ArxDependencies\freetype;E:\git\ArxDependencies\devil;E:\git\ArxDependencies\devil\include\IL;E:\git\ArxDependencies\openal;E:\git\ArxDependencies\boost;E:\git\ArxDependencies\opengl\include;E:\git\ArxDependencies\opengl\lib;E:\git\ArxDependencies\sdl;E:\git\ArxDependencies\directx
+        E:\git\ArxDependencies\zlib;E:\git\ArxDependencies\freetype;E:\git\ArxDependencies\devil;E:\git\ArxDependencies\openal;E:\git\ArxDependencies\boost;E:\git\ArxDependencies\opengl;E:\git\ArxDependencies\sdl;E:\git\ArxDependencies\directx
 
 3. Copy the necessary DLLs to the game binary folder (arx\bin):
 
