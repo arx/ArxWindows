@@ -1,0 +1,1 @@
+makensis.exe /V2 /DVERSION=1.0 /DTARGET=64 /DARCH=x64 arxlibertatis.nsi
