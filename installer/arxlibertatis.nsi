@@ -2,9 +2,9 @@
 
 	!define MULTIUSER_EXECUTIONLEVEL Highest
 	!define MULTIUSER_MUI
-	!define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_KEY "Software\Arx Libertatis"
+	!define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_KEY "Software\ArxLibertatis"
 	!define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_VALUENAME "InstallLocation"
-	!define MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_KEY "Software\Arx Libertatis"
+	!define MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_KEY "Software\ArxLibertatis"
 	!define MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_VALUENAME "InstallLocation"
 	!define MULTIUSER_INSTALLMODE_INSTDIR "Arx Libertatis"
 
@@ -75,7 +75,7 @@
 
 	;Remember the installer language
 	!define MUI_LANGDLL_REGISTRY_ROOT "SHCTX" 
-	!define MUI_LANGDLL_REGISTRY_KEY "Software\Arx Libertatis" 
+	!define MUI_LANGDLL_REGISTRY_KEY "Software\ArxLibertatis" 
 	!define MUI_LANGDLL_REGISTRY_VALUENAME "Installer Language"
 
 ;--------------------------------
@@ -88,7 +88,7 @@
 
 	;Start Menu Folder Page Configuration
 	!define MUI_STARTMENUPAGE_REGISTRY_ROOT "SHCTX" 
-	!define MUI_STARTMENUPAGE_REGISTRY_KEY "Software\Arx Libertatis" 
+	!define MUI_STARTMENUPAGE_REGISTRY_KEY "Software\ArxLibertatis" 
 	!define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "Start Menu Folder"
 	!define MUI_STARTMENUPAGE_DEFAULTFOLDER "Arx Libertatis"
 
@@ -187,17 +187,18 @@ Section "Arx Libertatis"
 	${WriteUninstaller} "$INSTDIR\Uninstall.exe"
 
 	;Store installation folder
-	WriteRegStr SHCTX "Software\Arx Libertatis" "InstallLocation" $INSTDIR
+	WriteRegStr SHCTX "Software\ArxLibertatis" "InstallLocation" $INSTDIR
+	WriteRegStr SHCTX "Software\ArxLibertatis" "DataDir" $INSTDIR
 
 	;Add uninstall information
-	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Arx Libertatis" "DisplayName" "Arx Libertatis" 
-	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Arx Libertatis" "DisplayIcon" "$\"$INSTDIR\arx.exe$\""
-	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Arx Libertatis" "UninstallString" "$\"$INSTDIR\Uninstall.exe$\""
-	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Arx Libertatis" "QuietUninstallString" "$\"$INSTDIR\Uninstall.exe$\" /S"
-	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Arx Libertatis" "URLInfoAbout" "http://arx.parpg.net/"
-	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Arx Libertatis" "DisplayVersion" "${VERSION}"
-	WriteRegDWORD SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Arx Libertatis" "NoModify" 1
-	WriteRegDWORD SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Arx Libertatis" "NoRepair" 1
+	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArxLibertatis" "DisplayName" "Arx Libertatis" 
+	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArxLibertatis" "DisplayIcon" "$\"$INSTDIR\arx.exe$\""
+	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArxLibertatis" "UninstallString" "$\"$INSTDIR\Uninstall.exe$\""
+	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArxLibertatis" "QuietUninstallString" "$\"$INSTDIR\Uninstall.exe$\" /S"
+	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArxLibertatis" "URLInfoAbout" "http://arx.parpg.net/"
+	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArxLibertatis" "DisplayVersion" "${VERSION}"
+	WriteRegDWORD SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArxLibertatis" "NoModify" 1
+	WriteRegDWORD SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArxLibertatis" "NoRepair" 1
 
 	IfRebootFlag 0 noreboot
 	MessageBox MB_YESNO|MB_ICONQUESTION "A reboot is required to finish the installation. Do you wish to reboot now?" IDNO noreboot
@@ -256,8 +257,8 @@ Section "Uninstall"
 
 	;!insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
 
-	DeleteRegKey SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Arx Libertatis"
-	DeleteRegKey /ifempty SHCTX "Software\Arx Libertatis"
+	DeleteRegKey SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArxLibertatis"
+	DeleteRegKey /ifempty SHCTX "Software\ArxLibertatis"
 
 SectionEnd
 
