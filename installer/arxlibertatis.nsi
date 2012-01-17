@@ -128,6 +128,7 @@ Section "Arx Libertatis"
 	;----------------------------------------------------------------------------
 	${File} "." arx.exe
 	${File} "..\libs\devil\bin\" DevIL${TARGET}.dll
+	${File} "..\libs\devil\bin\" ILU${TARGET}.dll
 	${File} "..\libs\sdl\bin\" SDL${TARGET}.dll
 
 	${CopyArxData} $ArxFatalisInstallDir "" "data.pak" 238293
