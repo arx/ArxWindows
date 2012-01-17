@@ -16,6 +16,9 @@
 	!include "LogicLib.nsh"
 	!include "x64.nsh"
 
+	!include "UninstallLog.nsh"
+	!include "ArxFatalisData.nsh"	
+
 ;--------------------------------
 ;Define checks
 
@@ -45,6 +48,7 @@
 ;Variables
 
 	Var StartMenuFolder
+	Var ArxFatalisInstallDir
 
 ;--------------------------------
 ;Version Info
@@ -90,6 +94,13 @@
 
 	!insertmacro MUI_PAGE_STARTMENU Application $StartMenuFolder
 
+	!define MUI_DIRECTORYPAGE_VARIABLE          $ArxFatalisInstallDir
+	!define MUI_DIRECTORYPAGE_TEXT_DESTINATION  "Arx Fatalis Location"
+	!define MUI_DIRECTORYPAGE_TEXT_TOP          "In order to play Arx Libertatis, you need to have the original data from Arx Fatalis. You can also play using the demo data. Please specify the location of the original Arx Fatalis installation where *.pak files can be found. Those files (along with a few others) will be copied to your Arx Libertatis install directory. If you don't have the Arx Fatalis data yet, leave this field empty. You can always copy the data files later."
+	!define MUI_PAGE_HEADER_TEXT                "Specify Data Location"
+	!define MUI_PAGE_HEADER_SUBTEXT             "Please specify the location of the original Arx Fatalis data"
+	!insertmacro MUI_PAGE_DIRECTORY
+ 
 	!insertmacro MUI_PAGE_INSTFILES
 
 	!define MUI_FINISHPAGE_RUN "$INSTDIR\arx.exe"
@@ -110,18 +121,34 @@ Section "Arx Libertatis"
 	SectionIn RO
 
 	; Set output path to the installation directory.
-	SetOutPath $INSTDIR
+	${SetOutPath} $INSTDIR
 
 	;----------------------------------------------------------------------------
 	; Executable and required DLLs
 	;----------------------------------------------------------------------------
-	File arx.exe
-	File ..\libs\devil\bin\DevIL${TARGET}.dll
-	File ..\libs\sdl\bin\SDL${TARGET}.dll
+	${File} "." arx.exe
+	${File} "..\libs\devil\bin\" DevIL${TARGET}.dll
+	${File} "..\libs\sdl\bin\" SDL${TARGET}.dll
+
+	${CopyArxData} $ArxFatalisInstallDir "" "data.pak" 238293
+	${CopyArxData} $ArxFatalisInstallDir "" "data2.pak" 2164
+	${CopyArxData} $ArxFatalisInstallDir "" "loc_default.pak" 205
+	${CopyArxData} $ArxFatalisInstallDir "" "sfx.pak" 44134
+	${CopyArxData} $ArxFatalisInstallDir "" "speech_default.pak" 342201
+
+	${CreateDirectory} "$INSTDIR\graph"
+	${CreateDirectory} "$INSTDIR\graph\interface"
+	${CreateDirectory} "$INSTDIR\graph\obj3d"
+	${CreateDirectory} "$INSTDIR\graph\textures"
+
+	${CopyArxData} $ArxFatalisInstallDir "graph\interface\misc\" "*.*" 1800
+	${CopyArxData} $ArxFatalisInstallDir "graph\obj3d\textures\" "*.*" 1522
+	${CopyArxData} $ArxFatalisInstallDir "misc\" "*.*" 7612
 
 	;----------------------------------------------------------------------------
 	; OpenAL
 	;----------------------------------------------------------------------------
+	DetailPrint "Installing OpenAL"
 	File /oname=$PLUGINSDIR\oalinst.exe openal\oalinst.exe
 	ExecWait '"$PLUGINSDIR\oalinst.exe" /s /r' $1
 	${If} $1 == 0
@@ -140,7 +167,7 @@ Section "Arx Libertatis"
 	;----------------------------------------------------------------------------
 	ReadRegStr $0 HKLM "SOFTWARE\Microsoft\VisualStudio\10.0\VC\VCRedist\${ARCH}" 'Installed'
 	${If} $0 == 0
-		GetTempFileName $0
+		DetailPrint "Installing VC++ 2010 Redistributable"
 		File /oname=$PLUGINSDIR\vcredist_${ARCH}.exe vcredist\vcredist_${ARCH}.exe
 		ExecWait '"$PLUGINSDIR\vcredist_${ARCH}.exe" /passive /norestart' $1
 		
@@ -156,11 +183,11 @@ Section "Arx Libertatis"
 		${EndIf}
 	${EndIf}
 
-	;Store installation folder
-	WriteRegStr SHCTX "Software\Arx Libertatis" "" $INSTDIR
-
 	;Create uninstaller
-	WriteUninstaller "$INSTDIR\Uninstall.exe"
+	${WriteUninstaller} "$INSTDIR\Uninstall.exe"
+
+	;Store installation folder
+	WriteRegStr SHCTX "Software\Arx Libertatis" "InstallLocation" $INSTDIR
 
 	;Add uninstall information
 	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Arx Libertatis" "DisplayName" "Arx Libertatis" 
@@ -182,18 +209,18 @@ SectionEnd
 
 Section -StartMenu
 	!insertmacro MUI_STARTMENU_WRITE_BEGIN Application
-		CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
-		CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Play Arx Libertatis.lnk" "$INSTDIR\arx.exe"
-		CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
+		${CreateDirectory} "$SMPROGRAMS\$StartMenuFolder"
+		${CreateShortCut} "$SMPROGRAMS\$StartMenuFolder\Play Arx Libertatis.lnk" "$INSTDIR\arx.exe"
+		${CreateShortCut} "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
 	!insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
 
 Section "Create a desktop icon" Desktop
-	CreateShortCut "$DESKTOP\Arx Libertatis.lnk" "$INSTDIR\arx.exe"
+	${CreateShortCut} "$DESKTOP\Arx Libertatis.lnk" "$INSTDIR\arx.exe"
 SectionEnd
 
 Section "Create a Quick Launch icon" QuickLaunch
-	CreateShortCut "$QUICKLAUNCH\Arx Libertatis.lnk" "$INSTDIR\arx.exe"
+	${CreateShortCut} "$QUICKLAUNCH\Arx Libertatis.lnk" "$INSTDIR\arx.exe"
 SectionEnd 
 
 ;--------------------------------
@@ -203,19 +230,11 @@ Function .onInit
 	SetRegView ${TARGET}
 
 	!insertmacro MULTIUSER_INIT
+
+	Call FindArxInstall
+	StrCpy $ArxFatalisInstallDir $0 
+
 FunctionEnd
-
-
-; TODO Copy data & savegames
-; Steam App 1700, 
-; HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\XXXXX "InstallLocation"
-; HKCU\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\XXXXX "InstallLocation"
-; HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\XXXXX "InstallLocation"
-; HKLM\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\XXXXX "InstallLocation"
-; HKCU "SOFTWARE\Arkane Studios\Installed Apps\arx fatalis" "Folder"
-; HKCU "SOFTWARE\Wow6432Node\Arkane Studios\Installed Apps\arx fatalis" "Folder"
-; HKLM "SOFTWARE\Arkane Studios\Installed Apps\arx fatalis" "Folder"
-; HKLM "SOFTWARE\Wow6432Node\Arkane Studios\Installed Apps\arx fatalis" "Folder"
 
 
 ;--------------------------------
@@ -223,22 +242,19 @@ FunctionEnd
 
 Section "Uninstall"
 
-	Delete arx.exe
-	Delete DevIL${TARGET}.dll
-	Delete SDL${TARGET}.dll
+	; This will handle all files to uninstall
+	; Registry keys to remove are handled manually below
+	Call un.AutoUninstallFromLogFile
 
-	Delete "$INSTDIR\Uninstall.exe"
+	;Delete "$INSTDIR\arx.exe"
+	;Delete "$INSTDIR\DevIL${TARGET}.dll"
+	;Delete "$INSTDIR\SDL${TARGET}.dll"
 
-	RMDir "$INSTDIR"
+	;Delete "$INSTDIR\Uninstall.exe"
 
-	!insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
+	;RMDir "$INSTDIR"
 
-	Delete "$SMPROGRAMS\$StartMenuFolder\Play Arx Libertatis.lnk"
-	Delete "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk"
-	RMDir  "$SMPROGRAMS\$StartMenuFolder"
-
-	Delete "$DESKTOP\Arx Libertatis.lnk"
-	Delete "$QUICKLAUNCH\Arx Libertatis.lnk"
+	;!insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
 
 	DeleteRegKey SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\Arx Libertatis"
 	DeleteRegKey /ifempty SHCTX "Software\Arx Libertatis"
