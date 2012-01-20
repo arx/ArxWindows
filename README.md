@@ -15,6 +15,7 @@ It also contains the necessary to build installers for Arx Libertatis.
 * [GLEW](http://glew.sourceforge.net/)
 * [SDL](http://www.libsdl.org/)
 * [ZLib](http://zlib.net/)
+* [OpenSSL](http://www.openssl.org/)
 
 
 #### How to setup
@@ -28,7 +29,7 @@ It also contains the necessary to build installers for Arx Libertatis.
         CMAKE_PREFIX_PATH
 and set its value to
 
-        E:\git\ArxWindows\libs\zlib;E:\git\ArxWindows\libs\freetype;E:\git\ArxWindows\libs\devil;E:\git\ArxWindows\libs\openal;E:\git\ArxWindows\libs\boost;E:\git\ArxWindows\libs\opengl;E:\git\ArxWindows\libs\sdl;E:\git\ArxWindows\libs\directx
+        E:\git\ArxWindows\libs\zlib;E:\git\ArxWindows\libs\freetype;E:\git\ArxWindows\libs\devil;E:\git\ArxWindows\libs\openal;E:\git\ArxWindows\libs\boost;E:\git\ArxWindows\libs\opengl;E:\git\ArxWindows\libs\sdl;E:\git\ArxWindows\libs\directx;E:\git\ArxWindows\libs\openssl
 
 3. Copy the necessary DLLs to the game binary folder (arx\bin):
 
