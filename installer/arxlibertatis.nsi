@@ -11,6 +11,7 @@
 	!define MULTIUSER_USE_PROGRAMFILES${TARGET}
 
 	!include "MultiUserCustom.nsh"		; Modified "MultiUser.nsh" to allow installation to "C:\Program Files\Arx Libertatis" on x64
+	!include "Winver.nsh"
 	!include "MUI2.nsh"
 	!include "nsDialogs.nsh"
 	!include "LogicLib.nsh"
@@ -251,6 +252,24 @@ SectionEnd
 ;Installer Functions
 
 Function .onInit
+	; Check for >= Windows XP SP2
+	${IfNot} ${AtLeastWinVista}
+		${IfNot} ${IsWinXP}
+		${OrIfNot} ${AtLeastServicePack} 2
+  		MessageBox MB_OK|MB_ICONEXCLAMATION "Arx Libertatis requires Windows XP Service Pack 2 or later."
+  		Abort
+  	${EndIf}	
+	${EndIf}
+	
+	; Ensure the x64 version can't be installed on a 32-bit OS
+	${IfNot} ${RunningX64}
+		StrCmp ${TARGET} "64" Win64Install Win32Install
+Win64Install:
+		MessageBox MB_OK|MB_ICONEXCLAMATION "Arx Libertatis for x64 can't be installed on a 32-bit OS."
+		Abort
+Win32Install:
+	${EndIf}
+
 	SetRegView ${TARGET}
 
 	!insertmacro MULTIUSER_INIT
