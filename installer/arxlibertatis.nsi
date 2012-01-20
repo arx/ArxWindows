@@ -127,8 +127,8 @@ Section "Arx Libertatis"
 	; Executable and required DLLs
 	;----------------------------------------------------------------------------
 	${File} "." arx.exe
+	${File} "." arxunpak.exe
 	${File} "..\libs\devil\bin\" DevIL${TARGET}.dll
-	${File} "..\libs\devil\bin\" ILU${TARGET}.dll
 	${File} "..\libs\sdl\bin\" SDL${TARGET}.dll
 
 	${CopyArxData} $ArxFatalisInstallDir "" "data.pak" 238293
