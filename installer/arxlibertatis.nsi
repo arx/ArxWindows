@@ -117,7 +117,9 @@
 
 ;----------------------------------------------------------------------------
 Section "Arx Libertatis"
-
+	
+	SetDetailsPrint listonly
+	
 	InitPluginsDir
 	SectionIn RO
 
@@ -127,11 +129,20 @@ Section "Arx Libertatis"
 	;----------------------------------------------------------------------------
 	; Executable and required DLLs
 	;----------------------------------------------------------------------------
+	SetDetailsPrint both
+	DetailPrint "Installing Arx Libertatis binaries..."
+	SetDetailsPrint listonly
 	${File} "." arx.exe
 	${File} "." arxunpak.exe
 	${File} "..\libs\devil\bin\" DevIL${TARGET}.dll
 	${File} "..\libs\sdl\bin\" SDL${TARGET}.dll
 
+	;----------------------------------------------------------------------------
+	; Arx Fatalis data copy
+	;----------------------------------------------------------------------------
+	SetDetailsPrint both
+	DetailPrint "Copying Arx Fatalis data files..."
+	SetDetailsPrint listonly
 	${CopyArxData} $ArxFatalisInstallDir "" "data.pak" 238293
 	${CopyArxData} $ArxFatalisInstallDir "" "data2.pak" 2164
 	${CopyArxData} $ArxFatalisInstallDir "" "loc_default.pak" 205
@@ -147,12 +158,14 @@ Section "Arx Libertatis"
 	${CopyArxData} $ArxFatalisInstallDir "graph\obj3d\textures\" "*.*" 1522
 	${CopyArxData} $ArxFatalisInstallDir "misc\" "*.*" 7612
 	
-	;
+	;----------------------------------------------------------------------------
 	; DirectX
-	;
+	;----------------------------------------------------------------------------
+	SetDetailsPrint both
+	DetailPrint "Installing required DirectX components..."
+	SetDetailsPrint listonly
 	${SetOutPath} $PLUGINSDIR\dxsetup
 	CreateDirectory $PLUGINSDIR\dxsetup
-	DetailPrint "Installing required DirectX components"
 	File dxsetup\DSETUP.dll
 	File dxsetup\dsetup32.dll
 	File dxsetup\DXSETUP.exe
@@ -172,7 +185,9 @@ Section "Arx Libertatis"
 	;----------------------------------------------------------------------------
 	; OpenAL
 	;----------------------------------------------------------------------------
-	DetailPrint "Installing OpenAL"
+	SetDetailsPrint both
+	DetailPrint "Installing OpenAL..."
+	SetDetailsPrint listonly
 	File /oname=$PLUGINSDIR\oalinst.exe openal\oalinst.exe
 	ExecWait '"$PLUGINSDIR\oalinst.exe" /s /r' $1
 	${If} $1 == 0
@@ -189,27 +204,30 @@ Section "Arx Libertatis"
 	;----------------------------------------------------------------------------
 	; VC++ 2010 Redistributable
 	;----------------------------------------------------------------------------
-	ReadRegStr $0 HKLM "SOFTWARE\Microsoft\VisualStudio\10.0\VC\VCRedist\${ARCH}" 'Installed'
-	${If} $0 == 0
-		DetailPrint "Installing VC++ 2010 Redistributable"
-		File /oname=$PLUGINSDIR\vcredist_${ARCH}.exe vcredist\vcredist_${ARCH}.exe
-		ExecWait '"$PLUGINSDIR\vcredist_${ARCH}.exe" /passive /norestart' $1
-		
-		${If} $1 == 0
-			; Success!
-		${ElseIf} $1 == 3010
-			; Success, but reboot required
-			SetRebootFlag true
-		${Else}
-			; Failed!
-			MessageBox MB_OK|MB_ICONSTOP "Visual C++ 2010 Redistributable installation failed!"
-			Abort
-		${EndIf}
+	SetDetailsPrint both
+	DetailPrint "Installing VC++ 2010 Redistributable..."
+	SetDetailsPrint listonly
+	File /oname=$PLUGINSDIR\vcredist_${ARCH}.exe vcredist\vcredist_${ARCH}.exe
+	ExecWait '"$PLUGINSDIR\vcredist_${ARCH}.exe" /q /norestart' $1
+	${If} $1 == 0
+		; Success!
+	${ElseIf} $1 == 3010
+		; Success, but reboot required
+		SetRebootFlag true
+	${Else}
+		; Failed!
+		MessageBox MB_OK|MB_ICONSTOP "Visual C++ 2010 Redistributable installation failed!"
+		Abort
 	${EndIf}
 
-	;Create uninstaller
+	;----------------------------------------------------------------------------
+	; Create uninstaller
+	;----------------------------------------------------------------------------
 	${WriteUninstaller} "$INSTDIR\Uninstall.exe"
 
+	;----------------------------------------------------------------------------
+	; Registry fun
+	;----------------------------------------------------------------------------
 	;Store installation folder
 	WriteRegStr SHCTX "Software\ArxLibertatis" "InstallLocation" $INSTDIR
 	WriteRegStr SHCTX "Software\ArxLibertatis" "DataDir" $INSTDIR
@@ -271,7 +289,7 @@ Win32Install:
 	${EndIf}
 
 	SetRegView ${TARGET}
-
+	
 	!insertmacro MULTIUSER_INIT
 
 	Call FindArxInstall
