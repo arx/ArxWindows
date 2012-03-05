@@ -205,7 +205,7 @@ Section "Arx Libertatis"
 		SetRebootFlag true
 	${Else}
 		; Failed!
-		MessageBox MB_OK|MB_ICONSTOP "OpenAL installation failed!"
+		MessageBox MB_OK|MB_ICONSTOP "OpenAL installation failed with error $1!"
 		Abort
 	${EndIf}
 	
@@ -222,9 +222,11 @@ Section "Arx Libertatis"
 	${ElseIf} $1 == 3010
 		; Success, but reboot required
 		SetRebootFlag true
+	${ElseIf} $1 == 5100
+		; Later version already installed
 	${Else}
 		; Failed!
-		MessageBox MB_OK|MB_ICONSTOP "Visual C++ 2010 Redistributable installation failed!"
+		MessageBox MB_OK|MB_ICONSTOP "Visual C++ 2010 Redistributable installation failed with error $1!"
 		Abort
 	${EndIf}
 
