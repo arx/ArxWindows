@@ -39,9 +39,9 @@
 ;General
 
 	Name          "Arx Libertatis"
-	OutFile       "arxlibertatis_${VERSION}_${ARCH}.exe"
-	Icon          data\arx-libertatis.ico
-	UninstallIcon data\arx-libertatis.ico
+	OutFile       "ArxLibertatis_${VERSION}_${ARCH}.exe"
+	Icon          data\ArxLibertatis.ico
+	UninstallIcon data\ArxLibertatis.ico
 	InstallDir    "$PROGRAMFILES\Arx Libertatis"
 	BrandingText  " "
 
@@ -64,10 +64,10 @@
 ;--------------------------------
 ;Interface Settings
 
-	!define MUI_ICON "data\arx-libertatis.ico"
-	!define MUI_UNICON "data\arx-libertatis.ico"
-	!define MUI_WELCOMEFINISHPAGE_BITMAP "data\side.bmp"
-	!define MUI_UNWELCOMEFINISHPAGE_BITMAP "data\side.bmp"
+	!define MUI_ICON "data\ArxLibertatis.ico"
+	!define MUI_UNICON "data\ArxLibertatis.ico"
+	!define MUI_WELCOMEFINISHPAGE_BITMAP "data\Side.bmp"
+	!define MUI_UNWELCOMEFINISHPAGE_BITMAP "data\Side.bmp"
 	!define MUI_ABORTWARNING
 	!define MUI_COMPONENTSPAGE_NODESC 
 

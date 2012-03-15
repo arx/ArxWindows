@@ -1,1 +1,1 @@
-makensis.exe /V2 /DVERSION=1.0 /DTARGET=32 /DARCH=x86 arxlibertatis.nsi
+makensis.exe /V2 /DVERSION=1.0 /DTARGET=32 /DARCH=x86 ArxLibertatis.nsi
