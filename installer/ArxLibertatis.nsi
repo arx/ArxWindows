@@ -55,6 +55,7 @@
 ;Version Info
 
 	VIAddVersionKey  "ProductName"     "Arx Libertatis"
+	VIAddVersionKey  "CompanyName"		 "Arx Libertatis"
 	VIAddVersionKey  "ProductVersion"  "${VERSION}"
 	VIAddVersionKey  "FileVersion"     "${VERSION}"
 	VIAddVersionKey  "FileDescription" "Arx Libertatis installer"
@@ -100,6 +101,7 @@
 	!define MUI_DIRECTORYPAGE_TEXT_TOP          "In order to play Arx Libertatis, you need to have the original data from Arx Fatalis. You can also play using the demo data. Please specify the location of the original Arx Fatalis installation where *.pak files can be found. Those files (along with a few others) will be copied to your Arx Libertatis install directory. If you don't have the Arx Fatalis data yet, leave this field empty. You can always copy the data files later."
 	!define MUI_PAGE_HEADER_TEXT                "Specify Data Location"
 	!define MUI_PAGE_HEADER_SUBTEXT             "Please specify the location of the original Arx Fatalis data"
+	!define MUI_DIRECTORYPAGE_VERIFYONLEAVE
 	!insertmacro MUI_PAGE_DIRECTORY
  
 	!insertmacro MUI_PAGE_INSTFILES
