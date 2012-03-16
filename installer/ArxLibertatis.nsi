@@ -132,18 +132,18 @@ Section "Arx Libertatis"
 	SetDetailsPrint both
 	DetailPrint "Installing Arx Libertatis binaries..."
 	SetDetailsPrint listonly
-	${File} "." arx.exe
-	${File} "." arx.pdb
-	${File} "." arxsavetool.exe
-	${File} "." arxunpak.exe
-	${File} "." arxcrashreporter.exe
+	${File} "${BUILD_OUTPUT_DIR}" arx.exe
+	${File} "${BUILD_OUTPUT_DIR}" arx.pdb
+	${File} "${BUILD_OUTPUT_DIR}" arxsavetool.exe
+	${File} "${BUILD_OUTPUT_DIR}" arxunpak.exe
+	${File} "${BUILD_OUTPUT_DIR}" arxcrashreporter.exe
 	${File} "..\libs\devil\bin\" DevIL${TARGET}.dll
 	${File} "..\libs\sdl\bin\" SDL${TARGET}.dll
 	${File} "..\libs\dbghelp\bin\${ARCH}" dbghelp.dll
 	${File} "..\libs\dbghelp\bin\${ARCH}" symsrv.dll
-	${File} $%QTDIR_BIN${TARGET}% QtCore4.dll
-	${File} $%QTDIR_BIN${TARGET}% QtGui4.dll
-	${File} $%QTDIR_BIN${TARGET}% QtNetwork4.dll
+	${File} "${QT_BIN_DIR}" QtCore4.dll
+	${File} "${QT_BIN_DIR}" QtGui4.dll
+	${File} "${QT_BIN_DIR}" QtNetwork4.dll
 
 	;----------------------------------------------------------------------------
 	; Arx Fatalis data copy
