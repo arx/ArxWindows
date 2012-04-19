@@ -1,3 +1,30 @@
+;------------------------------------------------------------------------------
+; Copyright 2011-2012 Arx Libertatis Team (see the AUTHORS file)
+;
+; This file is part of Arx Libertatis.
+;
+; Arx Libertatis is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; Arx Libertatis is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with Arx Libertatis.  If not, see <http://www.gnu.org/licenses/>.
+;------------------------------------------------------------------------------
+
+;------------------------------------------------------------------------------
+; Arx Libertatis installer script for Windows 32/64 bits
+;
+; To build an installer you'll need NSIS and the md5 plugin
+;	* http://nsis.sourceforge.net
+;	* http://nsis.sourceforge.net/MD5_plugin
+;------------------------------------------------------------------------------
+
 	SetCompressor /SOLID LZMA 
 
 	!define MULTIUSER_EXECUTIONLEVEL Highest
@@ -20,7 +47,7 @@
 	!include "UninstallLog.nsh"
 	!include "ArxFatalisData.nsh"	
 
-;--------------------------------
+;------------------------------------------------------------------------------
 ;Define checks
 
 	!ifndef VERSION
@@ -35,7 +62,7 @@
 		!error "ARCH not defined."
 	!endif
 
-;--------------------------------
+;------------------------------------------------------------------------------
 ;General
 
 	Name          "Arx Libertatis"
@@ -45,13 +72,14 @@
 	InstallDir    "$PROGRAMFILES\Arx Libertatis"
 	BrandingText  " "
 
-;--------------------------------
+;------------------------------------------------------------------------------
 ;Variables
 
 	Var StartMenuFolder
 	Var ArxFatalisInstallDir
+	Var ArxFatalisLanguage
 
-;--------------------------------
+;------------------------------------------------------------------------------
 ;Version Info
 
 	VIAddVersionKey  "ProductName"     "Arx Libertatis"
@@ -62,7 +90,7 @@
 	VIAddVersionKey  "LegalCopyright"  "Copyright 2011 Arx Libertatis Team"
 	VIProductVersion "${VERSION}.0.0"
 	
-;--------------------------------
+;------------------------------------------------------------------------------
 ;Interface Settings
 
 	!define MUI_ICON "data\ArxLibertatis.ico"
@@ -72,7 +100,7 @@
 	!define MUI_ABORTWARNING
 	!define MUI_COMPONENTSPAGE_NODESC 
 
-;--------------------------------
+;------------------------------------------------------------------------------
 ;Language Selection Dialog Settings
 
 	;Remember the installer language
@@ -80,7 +108,7 @@
 	!define MUI_LANGDLL_REGISTRY_KEY "Software\ArxLibertatis" 
 	!define MUI_LANGDLL_REGISTRY_VALUENAME "Installer Language"
 
-;--------------------------------
+;------------------------------------------------------------------------------
 ;Pages
 
 	!insertmacro MUI_PAGE_WELCOME
@@ -96,15 +124,16 @@
 
 	!insertmacro MUI_PAGE_STARTMENU Application $StartMenuFolder
 
-	!define MUI_DIRECTORYPAGE_VARIABLE          $ArxFatalisInstallDir
+        !define MUI_DIRECTORYPAGE_VARIABLE          $ArxFatalisInstallDir
 	!define MUI_DIRECTORYPAGE_TEXT_DESTINATION  "Arx Fatalis Location"
 	!define MUI_DIRECTORYPAGE_TEXT_TOP          "In order to play Arx Libertatis, you need to have the original data from Arx Fatalis. You can also play using the demo data. Please specify the location of the original Arx Fatalis installation where *.pak files can be found. Those files (along with a few others) will be copied to your Arx Libertatis install directory. If you don't have the Arx Fatalis data yet, leave this field empty. You can always copy the data files later."
 	!define MUI_PAGE_HEADER_TEXT                "Specify Data Location"
 	!define MUI_PAGE_HEADER_SUBTEXT             "Please specify the location of the original Arx Fatalis data"
 	!define MUI_DIRECTORYPAGE_VERIFYONLEAVE
+	!define MUI_PAGE_CUSTOMFUNCTION_LEAVE 			DetectArx
 	!insertmacro MUI_PAGE_DIRECTORY
- 
 	!insertmacro MUI_PAGE_INSTFILES
+	!define MUI_FINISHPAGE_NOAUTOCLOSE
 
 	!define MUI_FINISHPAGE_RUN "$INSTDIR\arx.exe"
 	!insertmacro MUI_PAGE_FINISH
@@ -112,12 +141,12 @@
 	!insertmacro MUI_UNPAGE_CONFIRM
 	!insertmacro MUI_UNPAGE_INSTFILES
 
-;--------------------------------
+;------------------------------------------------------------------------------
 ;Languages
 
 	!insertmacro MUI_LANGUAGE "English"
 
-;----------------------------------------------------------------------------
+;------------------------------------------------------------------------------
 Section "Arx Libertatis"
 	
 	SetDetailsPrint listonly
@@ -153,20 +182,7 @@ Section "Arx Libertatis"
 	SetDetailsPrint both
 	DetailPrint "Copying Arx Fatalis data files..."
 	SetDetailsPrint listonly
-	${CopyArxData} $ArxFatalisInstallDir "" "data.pak" 238293
-	${CopyArxData} $ArxFatalisInstallDir "" "data2.pak" 2164
-	${CopyArxData} $ArxFatalisInstallDir "" "loc_default.pak" 205
-	${CopyArxData} $ArxFatalisInstallDir "" "sfx.pak" 44134
-	${CopyArxData} $ArxFatalisInstallDir "" "speech_default.pak" 342201
-
-	${CreateDirectory} "$INSTDIR\graph"
-	${CreateDirectory} "$INSTDIR\graph\interface"
-	${CreateDirectory} "$INSTDIR\graph\obj3d"
-	${CreateDirectory} "$INSTDIR\graph\textures"
-
-	${CopyArxData} $ArxFatalisInstallDir "graph\interface\misc\" "*.*" 1800
-	${CopyArxData} $ArxFatalisInstallDir "graph\obj3d\textures\" "*.*" 1522
-	${CopyArxData} $ArxFatalisInstallDir "misc\" "*.*" 7612
+	${CopyArxDataFiles} $ArxFatalisInstallDir $ArxFatalisLanguage
 	
 	;----------------------------------------------------------------------------
 	; DirectX
@@ -240,11 +256,11 @@ Section "Arx Libertatis"
 	;----------------------------------------------------------------------------
 	; Registry fun
 	;----------------------------------------------------------------------------
-	;Store installation folder
+	; Store installation folder
 	WriteRegStr SHCTX "Software\ArxLibertatis" "InstallLocation" $INSTDIR
 	WriteRegStr SHCTX "Software\ArxLibertatis" "DataDir" $INSTDIR
 
-	;Add uninstall information
+	; Add uninstall information
 	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArxLibertatis" "DisplayName" "Arx Libertatis" 
 	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArxLibertatis" "DisplayIcon" "$\"$INSTDIR\arx.exe$\""
 	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArxLibertatis" "UninstallString" "$\"$INSTDIR\Uninstall.exe$\""
@@ -253,6 +269,9 @@ Section "Arx Libertatis"
 	WriteRegStr SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArxLibertatis" "DisplayVersion" "${VERSION}"
 	WriteRegDWORD SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArxLibertatis" "NoModify" 1
 	WriteRegDWORD SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArxLibertatis" "NoRepair" 1
+	
+	; If an error occured, display a message
+	Call ShowDataErrorMessageBox
 
 	IfRebootFlag 0 noreboot
 	MessageBox MB_YESNO|MB_ICONQUESTION "A reboot is required to finish the installation. Do you wish to reboot now?" IDNO noreboot
@@ -278,7 +297,7 @@ Section "Create a Quick Launch icon" QuickLaunch
 	${CreateShortCut} "$QUICKLAUNCH\Arx Libertatis.lnk" "$INSTDIR\arx.exe"
 SectionEnd 
 
-;--------------------------------
+;------------------------------------------------------------------------------
 ;Installer Functions
 
 Function .onInit
@@ -310,7 +329,7 @@ Win32Install:
 FunctionEnd
 
 
-;--------------------------------
+;------------------------------------------------------------------------------
 ;Uninstaller Section
 
 Section "Uninstall"
@@ -334,7 +353,7 @@ Section "Uninstall"
 
 SectionEnd
 
-;--------------------------------
+;------------------------------------------------------------------------------
 ;Uninstaller Functions
 
 Function un.onInit
@@ -344,4 +363,71 @@ Function un.onInit
 	!insertmacro MULTIUSER_UNINIT
 	!insertmacro MUI_UNGETLANGUAGE
 	
+FunctionEnd
+
+
+
+;------------------------------------------------------------------------------
+Function DetectArx
+	; If no source data directory was specified, don't bother with the validation
+	${If} $ArxFatalisInstallDir == ""
+		goto end_success
+	${EndIf}
+
+	${DetectArxLanguage} $ArxFatalisInstallDir
+	StrCpy $ArxFatalisLanguage $0
+
+	${Switch} $ArxFatalisLanguage
+  		${Case} "demo"
+			MessageBox MB_YESNO|MB_ICONSTOP "Arx Fatalis (Demo) found, continue ?" IDNO end_abort
+			${Break}
+
+		${Case} "de"
+			MessageBox MB_YESNO|MB_ICONSTOP "Arx Fatalis (German) found, continue ?" IDNO end_abort
+			${Break}
+
+		${Case} "en"
+			MessageBox MB_YESNO|MB_ICONSTOP "Arx Fatalis (English) found, continue ?" IDNO end_abort
+			${Break}
+
+		${Case} "es"
+			MessageBox MB_YESNO|MB_ICONSTOP "Arx Fatalis (Spanish) found, continue ?" IDNO end_abort
+			${Break}
+
+		${Case} "fr"
+			MessageBox MB_YESNO|MB_ICONSTOP "Arx Fatalis (French) found, continue ?" IDNO end_abort
+			${Break}
+
+		${Case} "it"
+			MessageBox MB_YESNO|MB_ICONSTOP "Arx Fatalis (Italian) found, continue ?" IDNO end_abort
+			${Break}
+
+		${Case} "ru"
+			MessageBox MB_YESNO|MB_ICONSTOP "Arx Fatalis (Russian) found, continue ?" IDNO end_abort
+			${Break}
+
+		${Case} "not_found"
+			StrCpy $ArxFatalisLanguage "en"
+			StrCpy $1 "No speech.pak file found in this directory. Do you still want to continue and use this source directory ?"
+			MessageBox MB_YESNO|MB_ICONSTOP '$1' IDNO end_abort
+			${Break}
+
+		${Case} "unknown"
+			StrCpy $ArxFatalisLanguage "en"
+			StrCpy $1 "Arx Fatalis files were found but the version is unknown to this installer. Make sure you have applied the 1.21 patch on your original Arx Fatalis install before running this installer. Do you want to continue anyway ?"
+			MessageBox MB_YESNO|MB_ICONSTOP '$1' IDNO end_abort
+			${Break}
+
+		${Default}
+			MessageBox MB_OK|MB_ICONSTOP 'INTERNAL INSTALLER ERROR. Detected language is \"$ArxFatalisLanguage\" Please select another directory.'
+			goto end_abort
+	${EndSwitch}
+
+	goto end_success
+
+end_abort:
+	Abort
+	
+end_success:
+
 FunctionEnd
