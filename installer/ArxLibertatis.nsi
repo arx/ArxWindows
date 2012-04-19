@@ -179,10 +179,12 @@ Section "Arx Libertatis"
 	;----------------------------------------------------------------------------
 	; Arx Fatalis data copy
 	;----------------------------------------------------------------------------
-	SetDetailsPrint both
-	DetailPrint "Copying Arx Fatalis data files..."
-	SetDetailsPrint listonly
-	${CopyArxDataFiles} $ArxFatalisInstallDir $ArxFatalisLanguage
+	${If} $ArxFatalisInstallDir != ""
+		SetDetailsPrint both
+		DetailPrint "Copying Arx Fatalis data files..."
+		SetDetailsPrint listonly
+		${CopyArxDataFiles} $ArxFatalisInstallDir $ArxFatalisLanguage
+	${EndIf}
 	
 	;----------------------------------------------------------------------------
 	; DirectX
@@ -270,8 +272,10 @@ Section "Arx Libertatis"
 	WriteRegDWORD SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArxLibertatis" "NoModify" 1
 	WriteRegDWORD SHCTX "Software\Microsoft\Windows\CurrentVersion\Uninstall\ArxLibertatis" "NoRepair" 1
 	
-	; If an error occured, display a message
-	Call ShowDataErrorMessageBox
+	${If} $ArxFatalisInstallDir != ""
+		; If an error occured in the data copy, display a message
+		Call ShowDataErrorMessageBox
+	${EndIf}
 
 	IfRebootFlag 0 noreboot
 	MessageBox MB_YESNO|MB_ICONQUESTION "A reboot is required to finish the installation. Do you wish to reboot now?" IDNO noreboot
