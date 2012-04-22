@@ -57,3 +57,7 @@ and set its value to
         %QTDIR%\bin\QtGui4.dll (*)
         %QTDIR%\bin\QtNetwork4.dll (*)
 
+4. Compile boost or obtain prebuilt libraries
+        
+        * The easiest solution is to grab them from http://boost.teeks99.com/
+        * If you wish to build them yourself, refer to the boost documentation
