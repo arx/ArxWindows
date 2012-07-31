@@ -383,31 +383,31 @@ Function DetectArx
 
 	${Switch} $ArxFatalisLanguage
   		${Case} "demo"
-			MessageBox MB_YESNO|MB_ICONSTOP "Arx Fatalis (Demo) found, continue ?" IDNO end_abort
+			MessageBox MB_YESNO|MB_ICONWARNING "Arx Fatalis (Demo) found, continue ?" IDNO end_abort
 			${Break}
 
 		${Case} "de"
-			MessageBox MB_YESNO|MB_ICONSTOP "Arx Fatalis (German) found, continue ?" IDNO end_abort
+			MessageBox MB_YESNO|MB_ICONWARNING "Arx Fatalis (German) found, continue ?" IDNO end_abort
 			${Break}
 
 		${Case} "en"
-			MessageBox MB_YESNO|MB_ICONSTOP "Arx Fatalis (English) found, continue ?" IDNO end_abort
+			MessageBox MB_YESNO|MB_ICONWARNING "Arx Fatalis (English) found, continue ?" IDNO end_abort
 			${Break}
 
 		${Case} "es"
-			MessageBox MB_YESNO|MB_ICONSTOP "Arx Fatalis (Spanish) found, continue ?" IDNO end_abort
+			MessageBox MB_YESNO|MB_ICONWARNING "Arx Fatalis (Spanish) found, continue ?" IDNO end_abort
 			${Break}
 
 		${Case} "fr"
-			MessageBox MB_YESNO|MB_ICONSTOP "Arx Fatalis (French) found, continue ?" IDNO end_abort
+			MessageBox MB_YESNO|MB_ICONWARNING "Arx Fatalis (French) found, continue ?" IDNO end_abort
 			${Break}
 
 		${Case} "it"
-			MessageBox MB_YESNO|MB_ICONSTOP "Arx Fatalis (Italian) found, continue ?" IDNO end_abort
+			MessageBox MB_YESNO|MB_ICONWARNING "Arx Fatalis (Italian) found, continue ?" IDNO end_abort
 			${Break}
 
 		${Case} "ru"
-			MessageBox MB_YESNO|MB_ICONSTOP "Arx Fatalis (Russian) found, continue ?" IDNO end_abort
+			MessageBox MB_YESNO|MB_ICONWARNING "Arx Fatalis (Russian) found, continue ?" IDNO end_abort
 			${Break}
 
 		${Case} "not_found"
