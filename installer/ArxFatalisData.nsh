@@ -323,6 +323,7 @@ FunctionEnd
 
 ; Checksums of speech.pak used to detect languages.
 !define speech_checksum_de   "4c3fdb1f702700255924afde49081b6e"
+!define speech_checksum_de_2 "ab8a93161688d793a7c78fbefd7d133e"
 !define speech_checksum_en   "4e8f962d8204bcfd79ce6f3226d6d6de"
 !define speech_checksum_es   "2f88c67ae1537919e69386d27583125b"
 !define speech_checksum_fr   "4edf9f8c799190590b4cd52cfa5f91b1"
@@ -408,7 +409,7 @@ Function CopyArxDataFiles
 			${Case} "de"
 				DetailPrint "Copying german data files..."
 	 	 		${CopyAndValidateFile} "31bc35bca48e430e108db1b8bcc2621d" $0 "" "loc.pak"
-				${CopyAndValidateFile} ${speech_checksum_de}              $0 "" "speech.pak"
+				${CopyAndValidateFile} "${speech_checksum_de} or ${speech_checksum_de_2}" $0 "" "speech.pak"
 				${Break}
 	
 			${Default}
@@ -481,6 +482,7 @@ Function DetectArxLanguage
 	
 	${Switch} $2
 		${Case} ${speech_checksum_de}
+		${Case} ${speech_checksum_de_2}
 			StrCpy $3 "de"
 			${Break}
 			
