@@ -83,12 +83,12 @@
 ;Version Info
 
 	VIAddVersionKey  "ProductName"     "Arx Libertatis"
-	VIAddVersionKey  "CompanyName"		 "Arx Libertatis"
+	VIAddVersionKey  "CompanyName"     "Arx Libertatis"
 	VIAddVersionKey  "ProductVersion"  "${VERSION}"
 	VIAddVersionKey  "FileVersion"     "${VERSION}"
 	VIAddVersionKey  "FileDescription" "Arx Libertatis installer"
-	VIAddVersionKey  "LegalCopyright"  "Copyright 2011 Arx Libertatis Team"
-	VIProductVersion "${VERSION}.0.0"
+	VIAddVersionKey  "LegalCopyright"  "Copyright 2012 Arx Libertatis Team"
+	VIProductVersion "${VERSION}.0"
 	
 ;------------------------------------------------------------------------------
 ;Interface Settings
@@ -124,13 +124,13 @@
 
 	!insertmacro MUI_PAGE_STARTMENU Application $StartMenuFolder
 
-        !define MUI_DIRECTORYPAGE_VARIABLE          $ArxFatalisInstallDir
+	!define MUI_DIRECTORYPAGE_VARIABLE          $ArxFatalisInstallDir
 	!define MUI_DIRECTORYPAGE_TEXT_DESTINATION  "Arx Fatalis Location"
 	!define MUI_DIRECTORYPAGE_TEXT_TOP          "In order to play Arx Libertatis, you need to have the original data from Arx Fatalis. You can also play using the demo data. Please specify the location of the original Arx Fatalis installation where *.pak files can be found. Those files (along with a few others) will be copied to your Arx Libertatis install directory. If you don't have the Arx Fatalis data yet, leave this field empty. You can always copy the data files later."
 	!define MUI_PAGE_HEADER_TEXT                "Specify Data Location"
 	!define MUI_PAGE_HEADER_SUBTEXT             "Please specify the location of the original Arx Fatalis data"
 	!define MUI_DIRECTORYPAGE_VERIFYONLEAVE
-	!define MUI_PAGE_CUSTOMFUNCTION_LEAVE 			DetectArx
+	!define MUI_PAGE_CUSTOMFUNCTION_LEAVE       DetectArx
 	!insertmacro MUI_PAGE_DIRECTORY
 	!insertmacro MUI_PAGE_INSTFILES
 	!define MUI_FINISHPAGE_NOAUTOCLOSE
@@ -383,31 +383,31 @@ Function DetectArx
 
 	${Switch} $ArxFatalisLanguage
   		${Case} "demo"
-			MessageBox MB_YESNO|MB_ICONWARNING "Arx Fatalis (Demo) found, continue ?" IDNO end_abort
+			MessageBox MB_YESNO|MB_ICONEXCLAMATION "Arx Fatalis (Demo) found, continue ?" IDNO end_abort
 			${Break}
 
 		${Case} "de"
-			MessageBox MB_YESNO|MB_ICONWARNING "Arx Fatalis (German) found, continue ?" IDNO end_abort
+			MessageBox MB_YESNO|MB_ICONEXCLAMATION "Arx Fatalis (German) found, continue ?" IDNO end_abort
 			${Break}
 
 		${Case} "en"
-			MessageBox MB_YESNO|MB_ICONWARNING "Arx Fatalis (English) found, continue ?" IDNO end_abort
+			MessageBox MB_YESNO|MB_ICONEXCLAMATION "Arx Fatalis (English) found, continue ?" IDNO end_abort
 			${Break}
 
 		${Case} "es"
-			MessageBox MB_YESNO|MB_ICONWARNING "Arx Fatalis (Spanish) found, continue ?" IDNO end_abort
+			MessageBox MB_YESNO|MB_ICONEXCLAMATION "Arx Fatalis (Spanish) found, continue ?" IDNO end_abort
 			${Break}
 
 		${Case} "fr"
-			MessageBox MB_YESNO|MB_ICONWARNING "Arx Fatalis (French) found, continue ?" IDNO end_abort
+			MessageBox MB_YESNO|MB_ICONEXCLAMATION "Arx Fatalis (French) found, continue ?" IDNO end_abort
 			${Break}
 
 		${Case} "it"
-			MessageBox MB_YESNO|MB_ICONWARNING "Arx Fatalis (Italian) found, continue ?" IDNO end_abort
+			MessageBox MB_YESNO|MB_ICONEXCLAMATION "Arx Fatalis (Italian) found, continue ?" IDNO end_abort
 			${Break}
 
 		${Case} "ru"
-			MessageBox MB_YESNO|MB_ICONWARNING "Arx Fatalis (Russian) found, continue ?" IDNO end_abort
+			MessageBox MB_YESNO|MB_ICONEXCLAMATION "Arx Fatalis (Russian) found, continue ?" IDNO end_abort
 			${Break}
 
 		${Case} "not_found"
