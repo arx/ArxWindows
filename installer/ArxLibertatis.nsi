@@ -168,7 +168,6 @@ Section "Arx Libertatis"
 	${File} "${BUILD_OUTPUT_DIR}" arxsavetool.exe
 	${File} "${BUILD_OUTPUT_DIR}" arxunpak.exe
 	${File} "${BUILD_OUTPUT_DIR}" arxcrashreporter.exe
-	${File} "..\libs\devil\bin\" DevIL${TARGET}.dll
 	${File} "..\libs\sdl\bin\" SDL${TARGET}.dll
 	${File} "..\libs\dbghelp\bin\${ARCH}" dbghelp.dll
 	${File} "..\libs\dbghelp\bin\${ARCH}" symsrv.dll
@@ -343,7 +342,6 @@ Section "Uninstall"
 	Call un.AutoUninstallFromLogFile
 
 	;Delete "$INSTDIR\arx.exe"
-	;Delete "$INSTDIR\DevIL${TARGET}.dll"
 	;Delete "$INSTDIR\SDL${TARGET}.dll"
 
 	;Delete "$INSTDIR\Uninstall.exe"
