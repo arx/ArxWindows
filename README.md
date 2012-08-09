@@ -7,7 +7,6 @@ It also contains the necessary to build installers for Arx Libertatis.
 ### Libraries
 
 * [Boost](http://www.boost.org/)
-* [DevIL](http://openil.sourceforge.net/)
 * [DirectX SDK](http://msdn.microsoft.com/en-us/directx/aa937788/)
 * [FreeType](http://www.freetype.org/)
 * [OpenAL](http://connect.creativelabs.com/openal/)
@@ -33,13 +32,12 @@ Additionally, you'll need the following libraries to build the Crash Reporter:
         CMAKE_PREFIX_PATH
 and set its value to
 
-        E:\git\ArxWindows\libs\zlib;E:\git\ArxWindows\libs\freetype;E:\git\ArxWindows\libs\devil;E:\git\ArxWindows\libs\openal;E:\git\ArxWindows\libs\boost;E:\git\ArxWindows\libs\opengl;E:\git\ArxWindows\libs\sdl;E:\git\ArxWindows\libs\directx;E:\git\ArxWindows\libs\dbghelp
+        E:\git\ArxWindows\libs\zlib;E:\git\ArxWindows\libs\freetype;E:\git\ArxWindows\libs\openal;E:\git\ArxWindows\libs\boost;E:\git\ArxWindows\libs\opengl;E:\git\ArxWindows\libs\sdl;E:\git\ArxWindows\libs\directx;E:\git\ArxWindows\libs\dbghelp
 
 3. Copy the necessary DLLs to the game binary folder (arx\bin). Those marked with a (*) are only needed for the Crash Reporter, 
 
 >>For 32-bit:
 >>
-        E:\git\ArxWindows\libs\devil\bin\DevIL32.dll
         E:\git\ArxWindows\libs\sdl\bin\SDL32.dll
         E:\git\ArxWindows\libs\dbghelp\bin\x86\dbghelp.dll (*)
         E:\git\ArxWindows\libs\dbghelp\bin\x86\symserv.dll (*)
@@ -49,7 +47,6 @@ and set its value to
         
 >>For 64-bit:
 >>
-        E:\git\ArxWindows\libs\devil\bin\DevIL64.dll
         E:\git\ArxWindows\libs\sdl\bin\SDL64.dll
         E:\git\ArxWindows\libs\dbghelp\bin\x64\dbghelp.dll (*)
         E:\git\ArxWindows\libs\dbghelp\bin\x64\symserv.dll (*)
