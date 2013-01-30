@@ -215,6 +215,7 @@ Section "Arx Libertatis"
 	SetDetailsPrint both
 	DetailPrint "Installing OpenAL..."
 	SetDetailsPrint listonly
+	File /oname=$INSTDIR\OpenAL32.dll "openal\soft_oal${TARGET}.dll"
 	File /oname=$PLUGINSDIR\oalinst.exe openal\oalinst.exe
 	ExecWait '"$PLUGINSDIR\oalinst.exe" /s /r' $1
 	${If} $1 == 0
