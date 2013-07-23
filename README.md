@@ -6,7 +6,7 @@ It also contains the necessary to build installers for Arx Libertatis.
 
 ### Libraries
 
-* [Boost](http://www.boost.org/)
+* [Boost](http://www.boost.org/) (headers only)
 * [DirectX SDK](http://msdn.microsoft.com/en-us/directx/aa937788/)
 * [FreeType](http://www.freetype.org/)
 * [OpenAL](http://connect.creativelabs.com/openal/)
@@ -53,8 +53,3 @@ and set its value to
         %QTDIR%\bin\QtCore4.dll (*)
         %QTDIR%\bin\QtGui4.dll (*)
         %QTDIR%\bin\QtNetwork4.dll (*)
-
-4. Compile boost or obtain prebuilt libraries
-        
-        * The easiest solution is to grab them from http://boost.teeks99.com/
-        * If you wish to build them yourself, refer to the boost documentation
