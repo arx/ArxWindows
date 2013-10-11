@@ -186,30 +186,6 @@ Section "Arx Libertatis"
 	${EndIf}
 	
 	;----------------------------------------------------------------------------
-	; DirectX
-	;----------------------------------------------------------------------------
-	SetDetailsPrint both
-	DetailPrint "Installing required DirectX components..."
-	SetDetailsPrint listonly
-	${SetOutPath} $PLUGINSDIR\dxsetup
-	CreateDirectory $PLUGINSDIR\dxsetup
-	File dxsetup\DSETUP.dll
-	File dxsetup\dsetup32.dll
-	File dxsetup\DXSETUP.exe
-	File dxsetup\dxupdate.cab
-	File dxsetup\Jun2010_D3DCompiler_43_${ARCH}.cab
-	File dxsetup\Jun2010_d3dx9_43_${ARCH}.cab
-	File dxsetup\Jun2010_XAudio_${ARCH}.cab
-	ExecWait '"$PLUGINSDIR\dxsetup\dxsetup.exe" /silent' $1
-	${If} $1 == 0
-		; Success!
-	${Else}
-		; Failed!
-		MessageBox MB_OK|MB_ICONSTOP "DirectX installation failed with error $1!"
-		Abort
-	${EndIf}
-
-	;----------------------------------------------------------------------------
 	; OpenAL
 	;----------------------------------------------------------------------------
 	SetDetailsPrint both
