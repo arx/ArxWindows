@@ -7,6 +7,7 @@ It also contains the necessary to build installers for Arx Libertatis.
 ### Libraries
 
 * [Boost](http://www.boost.org/) (headers only)
+* [GLM](http://glm.g-truc.net/)
 * [FreeType](http://www.freetype.org/)
 * [OpenAL](http://connect.creativelabs.com/openal/)
 * [OpenGL](http://www.opengl.org/registry/)
@@ -31,7 +32,7 @@ Additionally, you'll need the following libraries to build the Crash Reporter:
         CMAKE_PREFIX_PATH
 and set its value to
 
-        E:\git\ArxWindows\libs\zlib;E:\git\ArxWindows\libs\freetype;E:\git\ArxWindows\libs\openal;E:\git\ArxWindows\libs\boost;E:\git\ArxWindows\libs\opengl;E:\git\ArxWindows\libs\sdl;E:\git\ArxWindows\libs\dbghelp
+        E:\git\ArxWindows\libs\zlib;E:\git\ArxWindows\libs\freetype;E:\git\ArxWindows\libs\openal;E:\git\ArxWindows\libs\boost;E:\git\ArxWindows\libs\glm;E:\git\ArxWindows\libs\opengl;E:\git\ArxWindows\libs\sdl;E:\git\ArxWindows\libs\dbghelp
 
 3. Copy the necessary DLLs to the game binary folder (arx\bin). Those marked with a (*) are only needed for the Crash Reporter, 
 
