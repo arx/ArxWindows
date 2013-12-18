@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -18,8 +18,11 @@
 #include <boost/range/metafunctions.hpp>
 
 #include <boost/geometry/algorithms/area.hpp>
+#include <boost/geometry/multi/core/tags.hpp>
 #include <boost/geometry/multi/core/point_type.hpp>
+#include <boost/geometry/multi/geometries/concepts/check.hpp>
 #include <boost/geometry/multi/algorithms/detail/multi_sum.hpp>
+#include <boost/geometry/multi/algorithms/num_points.hpp>
 
 
 namespace boost { namespace geometry
@@ -29,21 +32,20 @@ namespace boost { namespace geometry
 #ifndef DOXYGEN_NO_DISPATCH
 namespace dispatch
 {
-template <typename MultiGeometry, typename Strategy>
-struct area<multi_polygon_tag, MultiGeometry, Strategy>
-    : detail::multi_sum
-        <
-            typename Strategy::return_type,
-            MultiGeometry,
-            Strategy,
-            area
-                <
-                    polygon_tag,
-                    typename boost::range_value<MultiGeometry>::type,
-                    Strategy
-                >
-    >
-{};
+template <typename MultiGeometry>
+struct area<MultiGeometry, multi_polygon_tag> : detail::multi_sum
+{
+    template <typename Strategy>
+    static inline typename Strategy::return_type
+    apply(MultiGeometry const& multi, Strategy const& strategy)
+    {
+        return multi_sum::apply
+               <
+                   typename Strategy::return_type,
+                   area<typename boost::range_value<MultiGeometry>::type>
+               >(multi, strategy);
+    }
+};
 
 
 } // namespace dispatch

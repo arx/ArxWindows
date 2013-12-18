@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -32,7 +32,7 @@ namespace dispatch
 {
 
 
-template <typename Tag, typename Geometry>
+template <typename Geometry, typename Tag = typename tag<Geometry>::type>
 struct num_interior_rings
 {
     static inline std::size_t apply(Geometry const& )
@@ -44,7 +44,7 @@ struct num_interior_rings
 
 
 template <typename Polygon>
-struct num_interior_rings<polygon_tag, Polygon>
+struct num_interior_rings<Polygon, polygon_tag>
 {
     static inline std::size_t apply(Polygon const& polygon)
     {
@@ -74,11 +74,7 @@ struct num_interior_rings<polygon_tag, Polygon>
 template <typename Geometry>
 inline std::size_t num_interior_rings(Geometry const& geometry)
 {
-    return dispatch::num_interior_rings
-        <
-            typename tag<Geometry>::type,
-            Geometry
-        >::apply(geometry);
+    return dispatch::num_interior_rings<Geometry>::apply(geometry);
 }
 
 

@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -20,6 +20,7 @@
 #include <boost/geometry/algorithms/transform.hpp>
 
 #include <boost/geometry/multi/core/tags.hpp>
+#include <boost/geometry/multi/geometries/concepts/check.hpp>
 
 namespace boost { namespace geometry
 {
@@ -31,10 +32,10 @@ namespace detail { namespace transform
 /*!
     \brief Is able to transform any multi-geometry, calling the single-version as policy
 */
-template <typename Multi1, typename Multi2, typename Policy>
+template <typename Policy>
 struct transform_multi
 {
-    template <typename S>
+    template <typename Multi1, typename Multi2, typename S>
     static inline bool apply(Multi1 const& multi1, Multi2& multi2, S const& strategy)
     {
         traits::resize<Multi2>::apply(multi2, boost::size(multi1));
@@ -65,30 +66,18 @@ struct transform_multi
 namespace dispatch
 {
 
-template <typename Multi1, typename Multi2, typename Strategy>
+template <typename Multi1, typename Multi2>
 struct transform
     <
-        multi_tag, multi_tag,
         Multi1, Multi2,
-        Strategy
+        multi_tag, multi_tag
     >
     : detail::transform::transform_multi
         <
-            Multi1,
-            Multi2,
             transform
                 <
-                    typename single_tag_of
-                                <
-                                    typename tag<Multi1>::type
-                                >::type,
-                    typename single_tag_of
-                                <
-                                    typename tag<Multi2>::type
-                                >::type,
                     typename boost::range_value<Multi1>::type,
-                    typename boost::range_value<Multi2>::type,
-                    Strategy
+                    typename boost::range_value<Multi2>::type
                 >
         >
 {};

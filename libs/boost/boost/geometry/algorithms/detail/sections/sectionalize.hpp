@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -81,7 +81,7 @@ struct section
         , non_duplicate_index(-1)
     {
         assign_inverse(bounding_box);
-        for (register std::size_t i = 0; i < DimensionCount; i++)
+        for (std::size_t i = 0; i < DimensionCount; i++)
         {
             directions[i] = 0;
         }
@@ -189,11 +189,12 @@ struct check_duplicate_loop
 
     static inline bool apply(Segment const& seg)
     {
-        coordinate_type const diff =
-            geometry::get<1, Dimension>(seg) - geometry::get<0, Dimension>(seg);
-
-        coordinate_type const zero = 0;
-        if (! geometry::math::equals(diff, zero))
+        if (! geometry::math::equals
+                (
+                    geometry::get<0, Dimension>(seg), 
+                    geometry::get<1, Dimension>(seg)
+                )
+            )
         {
             return false;
         }
@@ -253,7 +254,7 @@ struct sectionalize_part
                 Range const& range,
                 ring_identifier ring_id)
     {
-        if (boost::size(range) <= index)
+        if (int(boost::size(range)) <= index)
         {
             return;
         }
@@ -366,8 +367,6 @@ struct sectionalize_range
     static inline void apply(Range const& range, Sections& sections,
                 ring_identifier ring_id)
     {
-        typedef model::referring_segment<Point const> segment_type;
-
         cview_type cview(range);
         view_type view(cview);
 
@@ -494,6 +493,29 @@ inline void set_section_unique_ids(Sections& sections)
         ++it)
     {
         it->id = index++;
+    }
+}
+
+template <typename Sections>
+inline void enlargeSections(Sections& sections)
+{
+    // Robustness issue. Increase sections a tiny bit such that all points are really within (and not on border)
+    // Reason: turns might, rarely, be missed otherwise (case: "buffer_mp1")
+    // Drawback: not really, range is now completely inside the section. Section is a tiny bit too large,
+    // which might cause (a small number) of more comparisons
+    // TODO: make dimension-agnostic
+    for (typename boost::range_iterator<Sections>::type it = boost::begin(sections);
+        it != boost::end(sections);
+        ++it)
+    {
+        typedef typename boost::range_value<Sections>::type section_type;
+        typedef typename section_type::box_type box_type;
+        typedef typename geometry::coordinate_type<box_type>::type coordinate_type;
+        coordinate_type const reps = math::relaxed_epsilon(10.0);
+        geometry::set<0, 0>(it->bounding_box, geometry::get<0, 0>(it->bounding_box) - reps);
+        geometry::set<0, 1>(it->bounding_box, geometry::get<0, 1>(it->bounding_box) - reps);
+        geometry::set<1, 0>(it->bounding_box, geometry::get<1, 0>(it->bounding_box) + reps);
+        geometry::set<1, 1>(it->bounding_box, geometry::get<1, 1>(it->bounding_box) + reps);
     }
 }
 
@@ -638,6 +660,7 @@ inline void sectionalize(Geometry const& geometry, Sections& sections, int sourc
     ring_id.source_index = source_index;
     sectionalizer_type::apply(geometry, sections, ring_id);
     detail::sectionalize::set_section_unique_ids(sections);
+    detail::sectionalize::enlargeSections(sections);
 }
 
 

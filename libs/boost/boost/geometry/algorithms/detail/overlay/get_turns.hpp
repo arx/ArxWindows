@@ -1,6 +1,6 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
 
 // Use, modification and distribution is subject to the Boost Software License,
 // Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
@@ -14,11 +14,10 @@
 #include <map>
 
 #include <boost/array.hpp>
+#include <boost/concept_check.hpp>
 #include <boost/mpl/if.hpp>
 #include <boost/range.hpp>
 #include <boost/typeof/typeof.hpp>
-
-#include <boost/tuple/tuple.hpp>
 
 #include <boost/geometry/core/access.hpp>
 #include <boost/geometry/core/coordinate_dimension.hpp>
@@ -58,13 +57,19 @@
 
 #ifdef BOOST_GEOMETRY_DEBUG_INTERSECTION
 #  include <sstream>
-#  include <boost/geometry/util/write_dsv.hpp>
+#  include <boost/geometry/io/dsv/write.hpp>
 #endif
 
 
 namespace boost { namespace geometry
 {
 
+// Silence warning C4127: conditional expression is constant
+#if defined(_MSC_VER)
+#pragma warning(push)  
+#pragma warning(disable : 4127)  
+#endif
+    
 
 #ifndef DOXYGEN_NO_DETAIL
 namespace detail { namespace get_turns
@@ -127,15 +132,48 @@ class get_turns_in_sections
         >::type range2_iterator;
 
 
+    template <typename Geometry, typename Section>
+    static inline bool neighbouring(Section const& section,
+            int index1, int index2)
+    {
+        // About n-2:
+        //   (square: range_count=5, indices 0,1,2,3
+        //    -> 0-3 are adjacent, don't check on intersections)
+        // Also tested for open polygons, and/or duplicates
+        // About first condition: will be optimized by compiler (static)
+        // It checks if it is areal (box,ring,(multi)polygon
+        int const n = int(section.range_count);
+
+        boost::ignore_unused_variable_warning(n);
+        boost::ignore_unused_variable_warning(index1);
+        boost::ignore_unused_variable_warning(index2);
+
+        return boost::is_same
+                    <
+                        typename tag_cast
+                            <
+                                typename geometry::point_type<Geometry1>::type, 
+                                areal_tag
+                            >::type, 
+                        areal_tag
+                    >::value
+               && index1 == 0 
+               && index2 >= n - 2
+                ;
+    }
+
 
 public :
     // Returns true if terminated, false if interrupted
     static inline bool apply(
             int source_id1, Geometry1 const& geometry1, Section1 const& sec1,
             int source_id2, Geometry2 const& geometry2, Section2 const& sec2,
+            bool skip_larger,
             Turns& turns,
             InterruptPolicy& interrupt_policy)
     {
+        boost::ignore_unused_variable_warning(interrupt_policy);
+
         cview_type1 cview1(range_by_section(geometry1, sec1));
         cview_type2 cview2(range_by_section(geometry2, sec2));
         view_type1 view1(cview1);
@@ -196,7 +234,7 @@ public :
                 if (skip)
                 {
                     // If sources are the same (possibly self-intersecting):
-                    // skip if it is a neighbouring sement.
+                    // skip if it is a neighbouring segment.
                     // (including first-last segment
                     //  and two segments with one or more degenerate/duplicate
                     //  (zero-length) segments in between)
@@ -204,12 +242,9 @@ public :
                     // Also skip if index1 < index2 to avoid getting all
                     // intersections twice (only do this on same source!)
 
-                    // About n-2:
-                    //   (square: range_count=5, indices 0,1,2,3
-                    //    -> 0-3 are adjacent)
-                    skip = index2 >= index1
-                        || ndi1 == ndi2 + 1
-                        || (index2 == 0 && index1 >= int(sec1.range_count) - 2)
+                    skip = (skip_larger && index1 >= index2)
+                        || ndi2 == ndi1 + 1
+                        || neighbouring<Geometry1>(sec1, index1, index2)
                         ;
                 }
 
@@ -221,7 +256,6 @@ public :
                     advance_to_non_duplicate_next(nd_next2, it2, sec2);
 
                     typedef typename boost::range_value<Turns>::type turn_info;
-                    typedef typename turn_info::point_type ip;
 
                     turn_info ti;
                     ti.operations[0].seg_id = segment_identifier(source_id1,
@@ -383,6 +417,7 @@ struct section_visitor
                     >::apply(
                             m_source_id1, m_geometry1, sec1,
                             m_source_id2, m_geometry2, sec2,
+                            false,
                             m_turns, m_interrupt_policy);
         }
         return true;
@@ -471,7 +506,7 @@ struct get_turns_cs
                 int source_id1, Range const& range,
                 int source_id2, Box const& box,
                 Turns& turns,
-                InterruptPolicy& ,
+                InterruptPolicy& interrupt_policy,
                 int multi_index = -1, int ring_index = -1)
     {
         if (boost::size(range) <= 1)
@@ -492,9 +527,9 @@ struct get_turns_cs
         next++;
         next++;
 
-        bool first = true;
+        //bool first = true;
 
-        char previous_side[2] = {0, 0};
+        //char previous_side[2] = {0, 0};
 
         int index = 0;
 
@@ -505,7 +540,7 @@ struct get_turns_cs
             segment_identifier seg_id(source_id1,
                         multi_index, ring_index, index);
 
-            if (first)
+            /*if (first)
             {
                 previous_side[0] = get_side<0>(box, *prev);
                 previous_side[1] = get_side<1>(box, *prev);
@@ -519,7 +554,7 @@ struct get_turns_cs
             // 1) EITHER the two points are lying on one side of the box (! 0 && the same)
             // 2) OR same in Y-direction
             // 3) OR all points are inside the box (0)
-            /*if (! (
+            if (! (
                 (current_side[0] != 0 && current_side[0] == previous_side[0])
                 || (current_side[1] != 0 && current_side[1] == previous_side[1])
                 || (current_side[0] == 0
@@ -533,7 +568,7 @@ struct get_turns_cs
                 get_turns_with_box(seg_id, source_id2,
                         *prev, *it, *next,
                         bp[0], bp[1], bp[2], bp[3],
-                        turns);
+                        turns, interrupt_policy);
                 // Future performance enhancement: 
                 // return if told by the interrupt policy 
             }
@@ -572,8 +607,11 @@ private:
             box_point_type const& bp2,
             box_point_type const& bp3,
             // Output
-            Turns& turns)
+            Turns& turns,
+            InterruptPolicy& interrupt_policy)
     {
+        boost::ignore_unused_variable_warning(interrupt_policy);
+
         // Depending on code some relations can be left out
 
         typedef typename boost::range_value<Turns>::type turn_info;
@@ -598,6 +636,12 @@ private:
         ti.operations[1].seg_id = segment_identifier(source_id2, -1, -1, 3);
         TurnPolicy::apply(rp0, rp1, rp2, bp3, bp0, bp1,
                 ti, std::back_inserter(turns));
+
+        if (InterruptPolicy::enabled)
+        {
+            interrupt_policy.apply(turns);
+        }
+
     }
 
 };
@@ -793,13 +837,13 @@ inline void get_turns(Geometry1 const& geometry1,
 {
     concept::check_concepts_and_equal_dimensions<Geometry1 const, Geometry2 const>();
 
-    typedef typename strategy_intersection
-        <
-            typename cs_tag<Geometry1>::type,
-            Geometry1,
-            Geometry2,
-            typename boost::range_value<Turns>::type
-        >::segment_intersection_strategy_type segment_intersection_strategy_type;
+    //typedef typename strategy_intersection
+    //    <
+    //        typename cs_tag<Geometry1>::type,
+    //        Geometry1,
+    //        Geometry2,
+    //        typename boost::range_value<Turns>::type
+    //    >::segment_intersection_strategy_type segment_intersection_strategy_type;
 
     typedef detail::overlay::get_turn_info
         <
@@ -836,6 +880,9 @@ inline void get_turns(Geometry1 const& geometry1,
             turns, interrupt_policy);
 }
 
+#if defined(_MSC_VER)
+#pragma warning(pop)  
+#endif
 
 }} // namespace boost::geometry
 

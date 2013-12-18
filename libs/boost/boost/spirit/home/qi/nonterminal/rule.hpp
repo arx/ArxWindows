@@ -154,9 +154,9 @@ namespace boost { namespace spirit { namespace qi
             >::type
         encoding_modifier_type;
 
-        explicit rule(std::string const& name_ = "unnamed-rule")
+        explicit rule(std::string const& name = "unnamed-rule")
           : base_type(terminal::make(reference_(*this)))
-          , name_(name_)
+          , name_(name)
         {
         }
 
@@ -168,7 +168,7 @@ namespace boost { namespace spirit { namespace qi
         }
 
         template <typename Auto, typename Expr>
-        static void define(rule& lhs, Expr const& expr, mpl::false_)
+        static void define(rule& /*lhs*/, Expr const& /*expr*/, mpl::false_)
         {
             // Report invalid expression error as early as possible.
             // If you got an error_invalid_expression error message here,
@@ -184,9 +184,9 @@ namespace boost { namespace spirit { namespace qi
         }
 
         template <typename Expr>
-        rule(Expr const& expr, std::string const& name_ = "unnamed-rule")
+        rule(Expr const& expr, std::string const& name = "unnamed-rule")
           : base_type(terminal::make(reference_(*this)))
-          , name_(name_)
+          , name_(name)
         {
             define<mpl::false_>(*this, expr, traits::matches<qi::domain, Expr>());
         }
@@ -231,12 +231,23 @@ namespace boost { namespace spirit { namespace qi
             return r;
         }
 
+#if defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
         // non-const version needed to suppress proto's %= kicking in
         template <typename Expr>
         friend rule& operator%=(rule& r, Expr& expr)
         {
             return r %= static_cast<Expr const&>(expr);
         }
+#else
+        // for rvalue references
+        template <typename Expr>
+        friend rule& operator%=(rule& r, Expr&& expr)
+        {
+            define<mpl::true_>(r, expr, traits::matches<qi::domain, Expr>());
+            return r;
+        }
+#endif
+
 #else
         // both friend functions have to be defined out of class as VC7.1
         // will complain otherwise
@@ -261,7 +272,7 @@ namespace boost { namespace spirit { namespace qi
         template <typename Context, typename Skipper, typename Attribute>
         bool parse(Iterator& first, Iterator const& last
           , Context& /*context*/, Skipper const& skipper
-          , Attribute& attr) const
+          , Attribute& attr_param) const
         {
             if (f)
             {
@@ -277,7 +288,7 @@ namespace boost { namespace spirit { namespace qi
                     typename make_attribute::type, attr_type, domain>
                 transform;
 
-                typename make_attribute::type made_attr = make_attribute::call(attr);
+                typename make_attribute::type made_attr = make_attribute::call(attr_param);
                 typename transform::type attr_ = transform::pre(made_attr);
 
                 // If you are seeing a compilation error here, you are probably
@@ -293,12 +304,12 @@ namespace boost { namespace spirit { namespace qi
                 {
                     // do up-stream transformation, this integrates the results
                     // back into the original attribute value, if appropriate
-                    traits::post_transform(attr, attr_);
+                    traits::post_transform(attr_param, attr_);
                     return true;
                 }
 
                 // inform attribute transformation of failed rhs
-                traits::fail_transform(attr, attr_);
+                traits::fail_transform(attr_param, attr_);
             }
             return false;
         }
@@ -307,7 +318,7 @@ namespace boost { namespace spirit { namespace qi
           , typename Attribute, typename Params>
         bool parse(Iterator& first, Iterator const& last
           , Context& caller_context, Skipper const& skipper
-          , Attribute& attr, Params const& params) const
+          , Attribute& attr_param, Params const& params) const
         {
             if (f)
             {
@@ -323,7 +334,7 @@ namespace boost { namespace spirit { namespace qi
                     typename make_attribute::type, attr_type, domain>
                 transform;
 
-                typename make_attribute::type made_attr = make_attribute::call(attr);
+                typename make_attribute::type made_attr = make_attribute::call(attr_param);
                 typename transform::type attr_ = transform::pre(made_attr);
 
                 // If you are seeing a compilation error here, you are probably
@@ -339,12 +350,12 @@ namespace boost { namespace spirit { namespace qi
                 {
                     // do up-stream transformation, this integrates the results
                     // back into the original attribute value, if appropriate
-                    traits::post_transform(attr, attr_);
+                    traits::post_transform(attr_param, attr_);
                     return true;
                 }
 
                 // inform attribute transformation of failed rhs
-                traits::fail_transform(attr, attr_);
+                traits::fail_transform(attr_param, attr_);
             }
             return false;
         }

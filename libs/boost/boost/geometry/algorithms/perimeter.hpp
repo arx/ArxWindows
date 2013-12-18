@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -22,6 +22,7 @@
 #include <boost/geometry/algorithms/length.hpp>
 #include <boost/geometry/algorithms/detail/calculate_null.hpp>
 #include <boost/geometry/algorithms/detail/calculate_sum.hpp>
+// #include <boost/geometry/algorithms/detail/throw_on_empty_input.hpp>
 
 
 namespace boost { namespace geometry
@@ -32,40 +33,43 @@ namespace dispatch
 {
 
 // Default perimeter is 0.0, specializations implement calculated values
-template <typename Tag, typename Geometry, typename Strategy>
+template <typename Geometry, typename Tag = typename tag<Geometry>::type>
 struct perimeter : detail::calculate_null
-    <
-        typename default_length_result<Geometry>::type,
-        Geometry,
-        Strategy
-    >
-{};
+{
+    typedef typename default_length_result<Geometry>::type return_type;
 
-template <typename Geometry, typename Strategy>
-struct perimeter<ring_tag, Geometry, Strategy>
+    template <typename Strategy>
+    static inline return_type apply(Geometry const& geometry, Strategy const& strategy)
+    {
+        return calculate_null::apply<return_type>(geometry, strategy);
+    }
+};
+
+template <typename Geometry>
+struct perimeter<Geometry, ring_tag>
     : detail::length::range_length
         <
             Geometry,
-            Strategy,
             closure<Geometry>::value
         >
 {};
 
-template <typename Polygon, typename Strategy>
-struct perimeter<polygon_tag, Polygon, Strategy>
-    : detail::calculate_polygon_sum
-        <
-            typename default_length_result<Polygon>::type,
-            Polygon,
-            Strategy,
-            detail::length::range_length
+template <typename Polygon>
+struct perimeter<Polygon, polygon_tag> : detail::calculate_polygon_sum
+{
+    typedef typename default_length_result<Polygon>::type return_type;
+    typedef detail::length::range_length
                 <
                     typename ring_type<Polygon>::type,
-                    Strategy,
                     closure<Polygon>::value
-                >
-        >
-{};
+                > policy;
+
+    template <typename Strategy>
+    static inline return_type apply(Polygon const& polygon, Strategy const& strategy)
+    {
+        return calculate_polygon_sum::apply<return_type, policy>(polygon, strategy);
+    }
+};
 
 
 // box,n-sphere: to be implemented
@@ -97,12 +101,9 @@ inline typename default_length_result<Geometry>::type perimeter(
             point_tag, point_type
         >::type strategy_type;
 
-    return dispatch::perimeter
-        <
-            typename tag<Geometry>::type,
-            Geometry,
-            strategy_type
-        >::apply(geometry, strategy_type());
+    // detail::throw_on_empty_input(geometry);
+        
+    return dispatch::perimeter<Geometry>::apply(geometry, strategy_type());
 }
 
 /*!
@@ -125,12 +126,9 @@ inline typename default_length_result<Geometry>::type perimeter(
 {
     concept::check<Geometry const>();
 
-    return dispatch::perimeter
-        <
-            typename tag<Geometry>::type,
-            Geometry,
-            Strategy
-        >::apply(geometry, strategy);
+    // detail::throw_on_empty_input(geometry);
+    
+    return dispatch::perimeter<Geometry>::apply(geometry, strategy);
 }
 
 }} // namespace boost::geometry

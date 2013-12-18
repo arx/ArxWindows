@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -30,47 +30,16 @@ namespace strategy { namespace distance { namespace services
 
 
 template <typename Strategy> struct tag {};
-template <typename Strategy> struct return_type
+
+template <typename Strategy, typename P1, typename P2>
+struct return_type
 {
     BOOST_MPL_ASSERT_MSG
         (
-            false, NOT_IMPLEMENTED_FOR_THIS_STRATEGY, (types<Strategy>)
+            false, NOT_IMPLEMENTED_FOR_THIS_STRATEGY, (types<Strategy, P1, P2>)
         );
 };
 
-
-/*!
-    \brief Metafunction delivering a similar strategy with other input point types
-*/
-template
-<
-    typename Strategy,
-    typename Point1,
-    typename Point2
->
-struct similar_type
-{
-    BOOST_MPL_ASSERT_MSG
-        (
-            false, NOT_IMPLEMENTED_FOR_THIS_STRATEGY
-            , (types<Strategy, Point1, Point2>)
-        );
-};
-
-template
-<
-    typename Strategy,
-    typename Point1,
-    typename Point2
->
-struct get_similar
-{
-    BOOST_MPL_ASSERT_MSG
-        (
-            false, NOT_IMPLEMENTED_FOR_THIS_STRATEGY
-            , (types<Strategy, Point1, Point2>)
-        );
-};
 
 template <typename Strategy> struct comparable_type
 {
@@ -88,7 +57,8 @@ template <typename Strategy> struct get_comparable
         );
 };
 
-template <typename Strategy> struct result_from_distance {};
+template <typename Strategy, typename P1, typename P2>
+struct result_from_distance {};
 
 
 // For point-segment only:

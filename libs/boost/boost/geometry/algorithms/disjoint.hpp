@@ -1,8 +1,9 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
+// Copyright (c) 2013 Adam Wulkiewicz, Lodz, Poland.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -27,6 +28,7 @@
 #include <boost/geometry/core/reverse_dispatch.hpp>
 
 #include <boost/geometry/algorithms/detail/disjoint.hpp>
+#include <boost/geometry/algorithms/detail/for_each_range.hpp>
 #include <boost/geometry/algorithms/detail/point_on_border.hpp>
 #include <boost/geometry/algorithms/detail/overlay/get_turns.hpp>
 #include <boost/geometry/algorithms/within.hpp>
@@ -44,6 +46,61 @@ namespace boost { namespace geometry
 namespace detail { namespace disjoint
 {
 
+template<typename Geometry>
+struct check_each_ring_for_within
+{
+    bool has_within;
+    Geometry const& m_geometry;
+
+    inline check_each_ring_for_within(Geometry const& g)
+        : has_within(false)
+        , m_geometry(g)
+    {}
+
+    template <typename Range>
+    inline void apply(Range const& range)
+    {
+        typename geometry::point_type<Range>::type p;
+        geometry::point_on_border(p, range);
+        if (geometry::within(p, m_geometry))
+        {
+            has_within = true;
+        }
+    }
+};
+
+template <typename FirstGeometry, typename SecondGeometry>
+inline bool rings_containing(FirstGeometry const& geometry1,
+                SecondGeometry const& geometry2)
+{
+    check_each_ring_for_within<FirstGeometry> checker(geometry1);
+    geometry::detail::for_each_range(geometry2, checker);
+    return checker.has_within;
+}
+
+
+struct assign_disjoint_policy
+{
+    // We want to include all points:
+    static bool const include_no_turn = true;
+    static bool const include_degenerate = true;
+    static bool const include_opposite = true;
+
+    // We don't assign extra info:
+    template 
+    <
+        typename Info,
+        typename Point1,
+        typename Point2,
+        typename IntersectionInfo,
+        typename DirInfo
+    >
+    static inline void apply(Info& , Point1 const& , Point2 const&,
+                IntersectionInfo const&, DirInfo const&)
+    {}
+};
+   
+
 template <typename Geometry1, typename Geometry2>
 struct disjoint_linear
 {
@@ -54,12 +111,14 @@ struct disjoint_linear
         typedef overlay::turn_info<point_type> turn_info;
         std::deque<turn_info> turns;
 
-        // Get (and stop on) any intersection
+        // Specify two policies:
+        // 1) Stop at any intersection
+        // 2) In assignment, include also degenerate points (which are normally skipped)
         disjoint_interrupt_policy policy;
         geometry::get_turns
             <
-                false, false,
-                overlay::assign_null_policy
+                false, false, 
+                assign_disjoint_policy
             >(geometry1, geometry2, turns, policy);
         if (policy.has_intersections)
         {
@@ -92,8 +151,6 @@ struct disjoint_segment
     }
 };
 
-
-
 template <typename Geometry1, typename Geometry2>
 struct general_areal
 {
@@ -104,20 +161,10 @@ struct general_areal
             return false;
         }
 
-        typedef typename geometry::point_type<Geometry1>::type point_type;
-
         // If there is no intersection of segments, they might located
         // inside each other
-        point_type p1;
-        geometry::point_on_border(p1, geometry1);
-        if (geometry::within(p1, geometry2))
-        {
-            return false;
-        }
-
-        typename geometry::point_type<Geometry1>::type p2;
-        geometry::point_on_border(p2, geometry2);
-        if (geometry::within(p2, geometry1))
+        if (rings_containing(geometry1, geometry2)
+            || rings_containing(geometry2, geometry1))
         {
             return false;
         }
@@ -126,6 +173,51 @@ struct general_areal
     }
 };
 
+template <typename Segment, typename Box>
+struct disjoint_segment_box
+{
+    static inline bool apply(Segment const& segment, Box const& box)
+    {
+        typedef typename point_type<Segment>::type point_type;
+        point_type p0, p1;
+        geometry::detail::assign_point_from_index<0>(segment, p0);
+        geometry::detail::assign_point_from_index<1>(segment, p1);
+
+        return ! detail::disjoint::segment_box_intersection<point_type, Box>::apply(p0, p1, box);
+    }
+};
+
+template <typename Linestring, typename Box>
+struct disjoint_linestring_box
+{
+    static inline bool apply(Linestring const& linestring, Box const& box)
+    {
+        typedef typename ::boost::range_value<Linestring>::type point_type;
+        typedef typename ::boost::range_const_iterator<Linestring>::type const_iterator;        
+        typedef typename ::boost::range_size<Linestring>::type size_type;
+
+        const size_type count = ::boost::size(linestring);
+
+        if ( count == 0 )
+            return false;
+        else if ( count == 1 )
+            return detail::disjoint::point_box<point_type, Box, 0, dimension<point_type>::value>
+                   ::apply(*::boost::begin(linestring), box);
+        else
+        {
+            const_iterator it0 = ::boost::begin(linestring);
+            const_iterator it1 = ::boost::begin(linestring) + 1;
+            const_iterator last = ::boost::end(linestring);
+
+            for ( ; it1 != last ; ++it0, ++it1 )
+            {
+                if ( detail::disjoint::segment_box_intersection<point_type, Box>::apply(*it0, *it1, box) )
+                    return false;
+            }
+            return true;
+        }
+    }
+};
 
 }} // namespace detail::disjoint
 #endif // DOXYGEN_NO_DETAIL
@@ -138,67 +230,90 @@ namespace dispatch
 
 template
 <
-    typename GeometryTag1, typename GeometryTag2,
     typename Geometry1, typename Geometry2,
-    std::size_t DimensionCount
+    std::size_t DimensionCount = dimension<Geometry1>::type::value,
+    typename Tag1 = typename tag<Geometry1>::type,
+    typename Tag2 = typename tag<Geometry2>::type,
+    bool Reverse = reverse_dispatch<Geometry1, Geometry2>::type::value
 >
 struct disjoint
     : detail::disjoint::general_areal<Geometry1, Geometry2>
 {};
 
 
-template <typename Point1, typename Point2, std::size_t DimensionCount>
-struct disjoint<point_tag, point_tag, Point1, Point2, DimensionCount>
-    : detail::disjoint::point_point<Point1, Point2, 0, DimensionCount>
-{};
-
-
-template <typename Box1, typename Box2, std::size_t DimensionCount>
-struct disjoint<box_tag, box_tag, Box1, Box2, DimensionCount>
-    : detail::disjoint::box_box<Box1, Box2, 0, DimensionCount>
-{};
-
-
-template <typename Point, typename Box, std::size_t DimensionCount>
-struct disjoint<point_tag, box_tag, Point, Box, DimensionCount>
-    : detail::disjoint::point_box<Point, Box, 0, DimensionCount>
-{};
-
-template <typename Linestring1, typename Linestring2>
-struct disjoint<linestring_tag, linestring_tag, Linestring1, Linestring2, 2>
-    : detail::disjoint::disjoint_linear<Linestring1, Linestring2>
-{};
-
-template <typename Linestring1, typename Linestring2>
-struct disjoint<segment_tag, segment_tag, Linestring1, Linestring2, 2>
-    : detail::disjoint::disjoint_segment<Linestring1, Linestring2>
-{};
-
-template <typename Linestring, typename Segment>
-struct disjoint<linestring_tag, segment_tag, Linestring, Segment, 2>
-    : detail::disjoint::disjoint_linear<Linestring, Segment>
-{};
-
-
+// If reversal is needed, perform it
 template
 <
-    typename GeometryTag1, typename GeometryTag2,
     typename Geometry1, typename Geometry2,
-    std::size_t DimensionCount
+    std::size_t DimensionCount,
+    typename Tag1, typename Tag2
 >
-struct disjoint_reversed
+struct disjoint<Geometry1, Geometry2, DimensionCount, Tag1, Tag2, true>
+    : disjoint<Geometry2, Geometry1, DimensionCount, Tag2, Tag1, false>
 {
     static inline bool apply(Geometry1 const& g1, Geometry2 const& g2)
     {
         return disjoint
             <
-                GeometryTag2, GeometryTag1,
                 Geometry2, Geometry1,
-                DimensionCount
+                DimensionCount,
+                Tag2, Tag1
             >::apply(g2, g1);
     }
 };
 
+
+template <typename Point1, typename Point2, std::size_t DimensionCount, bool Reverse>
+struct disjoint<Point1, Point2, DimensionCount, point_tag, point_tag, Reverse>
+    : detail::disjoint::point_point<Point1, Point2, 0, DimensionCount>
+{};
+
+
+template <typename Box1, typename Box2, std::size_t DimensionCount, bool Reverse>
+struct disjoint<Box1, Box2, DimensionCount, box_tag, box_tag, Reverse>
+    : detail::disjoint::box_box<Box1, Box2, 0, DimensionCount>
+{};
+
+
+template <typename Point, typename Box, std::size_t DimensionCount, bool Reverse>
+struct disjoint<Point, Box, DimensionCount, point_tag, box_tag, Reverse>
+    : detail::disjoint::point_box<Point, Box, 0, DimensionCount>
+{};
+
+template <typename Point, typename Ring, std::size_t DimensionCount, bool Reverse>
+struct disjoint<Point, Ring, DimensionCount, point_tag, ring_tag, Reverse>
+    : detail::disjoint::reverse_covered_by<Point, Ring>
+{};
+
+template <typename Point, typename Polygon, std::size_t DimensionCount, bool Reverse>
+struct disjoint<Point, Polygon, DimensionCount, point_tag, polygon_tag, Reverse>
+    : detail::disjoint::reverse_covered_by<Point, Polygon>
+{};
+
+template <typename Linestring1, typename Linestring2, bool Reverse>
+struct disjoint<Linestring1, Linestring2, 2, linestring_tag, linestring_tag, Reverse>
+    : detail::disjoint::disjoint_linear<Linestring1, Linestring2>
+{};
+
+template <typename Segment1, typename Segment2, bool Reverse>
+struct disjoint<Segment1, Segment2, 2, segment_tag, segment_tag, Reverse>
+    : detail::disjoint::disjoint_segment<Segment1, Segment2>
+{};
+
+template <typename Linestring, typename Segment, bool Reverse>
+struct disjoint<Linestring, Segment, 2, linestring_tag, segment_tag, Reverse>
+    : detail::disjoint::disjoint_linear<Linestring, Segment>
+{};
+
+template <typename Segment, typename Box, std::size_t DimensionCount, bool Reverse>
+struct disjoint<Segment, Box, DimensionCount, segment_tag, box_tag, Reverse>
+    : detail::disjoint::disjoint_segment_box<Segment, Box>
+{};
+
+template <typename Linestring, typename Box, std::size_t DimensionCount, bool Reverse>
+struct disjoint<Linestring, Box, DimensionCount, linestring_tag, box_tag, Reverse>
+    : detail::disjoint::disjoint_linestring_box<Linestring, Box>
+{};
 
 } // namespace dispatch
 #endif // DOXYGEN_NO_DISPATCH
@@ -213,7 +328,9 @@ struct disjoint_reversed
 \param geometry1 \param_geometry
 \param geometry2 \param_geometry
 \return \return_check2{are disjoint}
- */
+
+\qbk{[include reference/algorithms/disjoint.qbk]}
+*/
 template <typename Geometry1, typename Geometry2>
 inline bool disjoint(Geometry1 const& geometry1,
             Geometry2 const& geometry2)
@@ -224,26 +341,7 @@ inline bool disjoint(Geometry1 const& geometry1,
             Geometry2 const
         >();
 
-    return boost::mpl::if_c
-        <
-            reverse_dispatch<Geometry1, Geometry2>::type::value,
-            dispatch::disjoint_reversed
-            <
-                typename tag<Geometry1>::type,
-                typename tag<Geometry2>::type,
-                Geometry1,
-                Geometry2,
-                dimension<Geometry1>::type::value
-            >,
-            dispatch::disjoint
-            <
-                typename tag<Geometry1>::type,
-                typename tag<Geometry2>::type,
-                Geometry1,
-                Geometry2,
-                dimension<Geometry1>::type::value
-            >
-        >::type::apply(geometry1, geometry2);
+    return dispatch::disjoint<Geometry1, Geometry2>::apply(geometry1, geometry2);
 }
 
 

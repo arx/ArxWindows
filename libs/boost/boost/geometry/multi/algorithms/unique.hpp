@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -19,6 +19,7 @@
 
 #include <boost/geometry/algorithms/unique.hpp>
 #include <boost/geometry/multi/core/tags.hpp>
+#include <boost/geometry/multi/geometries/concepts/check.hpp>
 
 
 namespace boost { namespace geometry
@@ -30,9 +31,10 @@ namespace detail { namespace unique
 {
 
 
-template <typename MultiGeometry, typename ComparePolicy, typename Policy>
+template <typename Policy>
 struct multi_unique
 {
+    template <typename MultiGeometry, typename ComparePolicy>
     static inline void apply(MultiGeometry& multi, ComparePolicy const& compare)
     {
         for (typename boost::range_iterator<MultiGeometry>::type
@@ -62,33 +64,15 @@ namespace dispatch
 //  possible for multi-points as well, removing points at the same location.
 
 
-template <typename MultiLineString, typename ComparePolicy>
-struct unique<multi_linestring_tag, MultiLineString, ComparePolicy>
-    : detail::unique::multi_unique
-        <
-            MultiLineString,
-            ComparePolicy,
-            detail::unique::range_unique
-            <
-                typename boost::range_value<MultiLineString>::type,
-                ComparePolicy
-            >
-        >
+template <typename MultiLineString>
+struct unique<MultiLineString, multi_linestring_tag>
+    : detail::unique::multi_unique<detail::unique::range_unique>
 {};
 
 
-template <typename MultiPolygon, typename ComparePolicy>
-struct unique<multi_polygon_tag, MultiPolygon, ComparePolicy>
-    : detail::unique::multi_unique
-        <
-            MultiPolygon,
-            ComparePolicy,
-            detail::unique::polygon_unique
-            <
-                typename boost::range_value<MultiPolygon>::type,
-                ComparePolicy
-            >
-        >
+template <typename MultiPolygon>
+struct unique<MultiPolygon, multi_polygon_tag>
+    : detail::unique::multi_unique<detail::unique::polygon_unique>
 {};
 
 

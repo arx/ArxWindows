@@ -1,6 +1,6 @@
 /////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga  2007.
+// (C) Copyright Ion Gaztanaga  2007-2013
 //
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
@@ -15,8 +15,11 @@
 
 #include <boost/intrusive/detail/config_begin.hpp>
 #include <iterator>
-#include <boost/intrusive/detail/pointer_to_other.hpp>
+#include <boost/intrusive/detail/utilities.hpp>
+#include <boost/intrusive/options.hpp>
+#include <boost/intrusive/pointer_traits.hpp>
 #include <boost/intrusive/detail/mpl.hpp>
+#include <boost/intrusive/bstree_algorithms.hpp>
 
 namespace boost {
 namespace intrusive {
@@ -24,9 +27,9 @@ namespace intrusive {
 template<class VoidPointer>
 struct tree_node
 {
-   typedef typename pointer_to_other
-      <VoidPointer
-      ,tree_node<VoidPointer> >::type   node_ptr;
+   typedef typename pointer_traits
+      <VoidPointer>::template rebind_pointer
+         <tree_node<VoidPointer> >::type   node_ptr;
 
    node_ptr parent_, left_, right_;
 };
@@ -36,27 +39,36 @@ struct tree_node_traits
 {
    typedef tree_node<VoidPointer> node;
 
-   typedef typename boost::pointer_to_other
-      <VoidPointer, node>::type              node_ptr;
-   typedef typename boost::pointer_to_other
-      <VoidPointer, const node>::type        const_node_ptr;
+   typedef typename pointer_traits<VoidPointer>::template
+      rebind_pointer<node>::type              node_ptr;
+   typedef typename pointer_traits<VoidPointer>::template
+      rebind_pointer<const node>::type        const_node_ptr;
 
-   static node_ptr get_parent(const_node_ptr n)
+   static node_ptr get_parent(const const_node_ptr & n)
    {  return n->parent_;  }
 
-   static void set_parent(node_ptr n, node_ptr p)
+   static node_ptr get_parent(const node_ptr & n)
+   {  return n->parent_;  }
+
+   static void set_parent(const node_ptr & n, const node_ptr & p)
    {  n->parent_ = p;  }
 
-   static node_ptr get_left(const_node_ptr n)
+   static node_ptr get_left(const const_node_ptr & n)
    {  return n->left_;  }
 
-   static void set_left(node_ptr n, node_ptr l)
+   static node_ptr get_left(const node_ptr & n)
+   {  return n->left_;  }
+
+   static void set_left(const node_ptr & n, const node_ptr & l)
    {  n->left_ = l;  }
 
-   static node_ptr get_right(const_node_ptr n)
+   static node_ptr get_right(const const_node_ptr & n)
    {  return n->right_;  }
 
-   static void set_right(node_ptr n, node_ptr r)
+   static node_ptr get_right(const node_ptr & n)
+   {  return n->right_;  }
+
+   static void set_right(const node_ptr & n, const node_ptr & r)
    {  n->right_ = r;  }
 };
 
@@ -66,45 +78,44 @@ struct tree_node_traits
 //                                                                         //
 /////////////////////////////////////////////////////////////////////////////
 
-// tree_iterator provides some basic functions for a 
+// tree_iterator provides some basic functions for a
 // node oriented bidirectional iterator:
-template<class Container, bool IsConst>
+template<class RealValueTraits, bool IsConst>
 class tree_iterator
-   :  public std::iterator
-         < std::bidirectional_iterator_tag
-         , typename Container::value_type
-         , typename Container::difference_type
-         , typename detail::if_c<IsConst,typename Container::const_pointer,typename Container::pointer>::type
-         , typename detail::if_c<IsConst,typename Container::const_reference,typename Container::reference>::type
-         >
+   :  public iiterator<RealValueTraits, IsConst, std::bidirectional_iterator_tag>::iterator_base
 {
    protected:
-   typedef typename Container::real_value_traits   real_value_traits;
-   typedef typename Container::node_algorithms     node_algorithms;
-   typedef typename real_value_traits::node_traits node_traits;
-   typedef typename node_traits::node              node;
-   typedef typename node_traits::node_ptr          node_ptr;
-   typedef typename boost::pointer_to_other
-      <node_ptr, void>::type                       void_pointer;
-   static const bool store_container_ptr = 
-      detail::store_cont_ptr_on_it<Container>::value;
+   typedef iiterator< RealValueTraits, IsConst
+                    , std::bidirectional_iterator_tag>   types_t;
+
+   typedef RealValueTraits                               real_value_traits;
+   typedef typename types_t::node_traits                 node_traits;
+
+   typedef typename types_t::node                        node;
+   typedef typename types_t::node_ptr                    node_ptr;
+   typedef typename types_t::void_pointer                void_pointer;
+   static const bool stateful_value_traits = types_t::stateful_value_traits;
+
+   typedef typename pointer_traits
+      <void_pointer>::template rebind_pointer
+         <const real_value_traits>::type   const_real_value_traits_ptr;
 
    public:
-   typedef typename Container::value_type    value_type;
-   typedef typename detail::if_c<IsConst,typename Container::const_pointer,typename Container::pointer>::type pointer;
-   typedef typename detail::if_c<IsConst,typename Container::const_reference,typename Container::reference>::type reference;
+   typedef typename types_t::value_type      value_type;
+   typedef typename types_t::pointer         pointer;
+   typedef typename types_t::reference       reference;
 
+   typedef bstree_algorithms<node_traits> node_algorithms;
 
    tree_iterator()
-      : members_ (node_ptr(0), (const void *)0)
    {}
 
-   explicit tree_iterator(node_ptr nodeptr, const Container *cont_ptr)
-      : members_ (nodeptr, cont_ptr)
+   explicit tree_iterator(const node_ptr & nodeptr, const const_real_value_traits_ptr &traits_ptr)
+      : members_(nodeptr, traits_ptr)
    {}
 
-   tree_iterator(tree_iterator<Container, false> const& other)
-      :  members_(other.pointed_node(), other.get_container())
+   tree_iterator(tree_iterator<real_value_traits, false> const& other)
+      :  members_(other.pointed_node(), other.get_real_value_traits())
    {}
 
    const node_ptr &pointed_node() const
@@ -114,12 +125,12 @@ class tree_iterator
    {  members_.nodeptr_ = nodeptr;  return static_cast<tree_iterator&>(*this);  }
 
    public:
-   tree_iterator& operator++() 
-   { 
-      members_.nodeptr_ = node_algorithms::next_node(members_.nodeptr_); 
-      return static_cast<tree_iterator&> (*this); 
+   tree_iterator& operator++()
+   {
+      members_.nodeptr_ = node_algorithms::next_node(members_.nodeptr_);
+      return static_cast<tree_iterator&> (*this);
    }
-   
+
    tree_iterator operator++(int)
    {
       tree_iterator result (*this);
@@ -127,12 +138,12 @@ class tree_iterator
       return result;
    }
 
-   tree_iterator& operator--() 
-   { 
-      members_.nodeptr_ = node_algorithms::prev_node(members_.nodeptr_); 
-      return static_cast<tree_iterator&> (*this); 
+   tree_iterator& operator--()
+   {
+      members_.nodeptr_ = node_algorithms::prev_node(members_.nodeptr_);
+      return static_cast<tree_iterator&> (*this);
    }
-   
+
    tree_iterator operator--(int)
    {
       tree_iterator result (*this);
@@ -150,40 +161,27 @@ class tree_iterator
    {  return *operator->();   }
 
    pointer operator->() const
-   { return detail::boost_intrusive_get_pointer(this->get_real_value_traits()->to_value_ptr(members_.nodeptr_)); }
+   { return this->get_real_value_traits()->to_value_ptr(members_.nodeptr_); }
 
-   const Container *get_container() const
-   {  return static_cast<const Container*>(members_.get_ptr());   }
-
-   const real_value_traits *get_real_value_traits() const
-   {  return &this->get_container()->get_real_value_traits();  }
+   const_real_value_traits_ptr get_real_value_traits() const
+   {
+      return pointer_traits<const_real_value_traits_ptr>::static_cast_from(members_.get_ptr());
+   }
 
    tree_iterator end_iterator_from_it() const
    {
-      return tree_iterator(node_algorithms::get_header(this->pointed_node()), this->get_container());
+      return tree_iterator(node_algorithms::get_header(this->pointed_node()), this->get_real_value_traits());
    }
 
-   tree_iterator<Container, false> unconst() const
-   {  return tree_iterator<Container, false>(this->pointed_node(), this->get_container());   }
+   tree_iterator<real_value_traits, false> unconst() const
+   {  return tree_iterator<real_value_traits, false>(this->pointed_node(), this->get_real_value_traits());   }
 
    private:
-   struct members
-      :  public detail::select_constptr
-         <void_pointer, store_container_ptr>::type
-   {
-      typedef typename detail::select_constptr
-         <void_pointer, store_container_ptr>::type Base;
-
-      members(const node_ptr &n_ptr, const void *cont)
-         :  Base(cont), nodeptr_(n_ptr)
-      {}
-
-      node_ptr nodeptr_;
-   } members_;
+   iiterator_members<node_ptr, stateful_value_traits> members_;
 };
 
-} //namespace intrusive 
-} //namespace boost 
+} //namespace intrusive
+} //namespace boost
 
 #include <boost/intrusive/detail/config_end.hpp>
 

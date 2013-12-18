@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -18,9 +18,9 @@
 #include <boost/range.hpp>
 
 #include <boost/geometry/algorithms/centroid.hpp>
-#include <boost/geometry/algorithms/num_points.hpp>
+#include <boost/geometry/multi/core/tags.hpp>
 #include <boost/geometry/multi/core/point_type.hpp>
-#include <boost/geometry/multi/algorithms/detail/multi_sum.hpp>
+#include <boost/geometry/multi/geometries/concepts/check.hpp>
 #include <boost/geometry/multi/algorithms/num_points.hpp>
 
 
@@ -37,13 +37,9 @@ namespace detail { namespace centroid
     \brief Building block of a multi-point, to be used as Policy in the
         more generec centroid_multi
 */
-template
-<
-    typename Point,
-    typename Strategy
->
 struct centroid_multi_point_state
 {
+    template <typename Point, typename Strategy>
     static inline void apply(Point const& point,
             Strategy const& strategy, typename Strategy::state_type& state)
     {
@@ -61,24 +57,21 @@ struct centroid_multi_point_state
         detail::centroid::centroid_multi
 
 */
-template
-<
-    typename Multi,
-    typename Point,
-    typename Strategy,
-    typename Policy
->
+template <typename Policy>
 struct centroid_multi
 {
+    template <typename Multi, typename Point, typename Strategy>
     static inline void apply(Multi const& multi, Point& centroid,
             Strategy const& strategy)
     {
+#if ! defined(BOOST_GEOMETRY_CENTROID_NO_THROW)
         // If there is nothing in any of the ranges, it is not possible
         // to calculate the centroid
         if (geometry::num_points(multi) == 0)
         {
             throw centroid_exception();
         }
+#endif
 
         typename Strategy::state_type state;
 
@@ -104,65 +97,28 @@ struct centroid_multi
 namespace dispatch
 {
 
-template
-<
-    typename MultiLinestring,
-    typename Point,
-    typename Strategy
->
-struct centroid<multi_linestring_tag, MultiLinestring, Point,  Strategy>
+template <typename MultiLinestring>
+struct centroid<MultiLinestring, multi_linestring_tag>
     : detail::centroid::centroid_multi
         <
-            MultiLinestring,
-            Point,
-            Strategy,
-            detail::centroid::centroid_range_state
-                <
-                    typename boost::range_value<MultiLinestring>::type,
-                    closed,
-                    Strategy
-                >
+            detail::centroid::centroid_range_state<closed>
         >
 {};
 
-template
-<
-    typename MultiPolygon,
-    typename Point,
-    typename Strategy
->
-struct centroid<multi_polygon_tag, MultiPolygon, Point,  Strategy>
+template <typename MultiPolygon>
+struct centroid<MultiPolygon, multi_polygon_tag>
     : detail::centroid::centroid_multi
         <
-            MultiPolygon,
-            Point,
-            Strategy,
             detail::centroid::centroid_polygon_state
-                <
-                    typename boost::range_value<MultiPolygon>::type,
-                    Strategy
-                >
         >
 {};
 
 
-template
-<
-    typename MultiPoint,
-    typename Point,
-    typename Strategy
->
-struct centroid<multi_point_tag, MultiPoint, Point,  Strategy>
+template <typename MultiPoint>
+struct centroid<MultiPoint, multi_point_tag>
     : detail::centroid::centroid_multi
         <
-            MultiPoint,
-            Point,
-            Strategy,
             detail::centroid::centroid_multi_point_state
-                <
-                    typename boost::range_value<MultiPoint>::type,
-                    Strategy
-                >
         >
 {};
 

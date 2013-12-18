@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -38,37 +38,37 @@ namespace dispatch
 
 
 template <typename Geometry>
-struct check<multi_point_tag, Geometry, true>
+struct check<Geometry, multi_point_tag, true>
     : detail::concept_check::check<concept::ConstMultiPoint<Geometry> >
 {};
 
 
 template <typename Geometry>
-struct check<multi_point_tag, Geometry, false>
+struct check<Geometry, multi_point_tag, false>
     : detail::concept_check::check<concept::MultiPoint<Geometry> >
 {};
 
 
 template <typename Geometry>
-struct check<multi_linestring_tag, Geometry, true>
+struct check<Geometry, multi_linestring_tag, true>
     : detail::concept_check::check<concept::ConstMultiLinestring<Geometry> >
 {};
 
 
 template <typename Geometry>
-struct check<multi_linestring_tag, Geometry, false>
+struct check<Geometry, multi_linestring_tag, false>
     : detail::concept_check::check<concept::MultiLinestring<Geometry> >
 {};
 
 
 template <typename Geometry>
-struct check<multi_polygon_tag, Geometry, true>
+struct check<Geometry, multi_polygon_tag, true>
     : detail::concept_check::check<concept::ConstMultiPolygon<Geometry> >
 {};
 
 
 template <typename Geometry>
-struct check<multi_polygon_tag, Geometry, false>
+struct check<Geometry, multi_polygon_tag, false>
     : detail::concept_check::check<concept::MultiPolygon<Geometry> >
 {};
 

@@ -2,7 +2,7 @@
 // detail/impl/kqueue_reactor.ipp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2011 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2013 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 // Copyright (c) 2005 Stefan Arentz (stefan at soze dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -28,8 +28,8 @@
 
 #if defined(__NetBSD__)
 # define BOOST_ASIO_KQUEUE_EV_SET(ev, ident, filt, flags, fflags, data, udata) \
-    EV_SET(ev, ident, filt, flags, fflags, \
-      data, reinterpret_cast<intptr_t>(udata))
+    EV_SET(ev, ident, filt, flags, fflags, data, \
+      reinterpret_cast<intptr_t>(static_cast<void*>(udata)))
 #else
 # define BOOST_ASIO_KQUEUE_EV_SET(ev, ident, filt, flags, fflags, data, udata) \
     EV_SET(ev, ident, filt, flags, fflags, data, udata)
@@ -126,9 +126,10 @@ void kqueue_reactor::init_task()
 int kqueue_reactor::register_descriptor(socket_type descriptor,
     kqueue_reactor::per_descriptor_data& descriptor_data)
 {
-  mutex::scoped_lock lock(registered_descriptors_mutex_);
+  descriptor_data = allocate_descriptor_state();
 
-  descriptor_data = registered_descriptors_.alloc();
+  mutex::scoped_lock lock(descriptor_data->mutex_);
+
   descriptor_data->descriptor_ = descriptor;
   descriptor_data->shutdown_ = false;
 
@@ -139,9 +140,10 @@ int kqueue_reactor::register_internal_descriptor(
     int op_type, socket_type descriptor,
     kqueue_reactor::per_descriptor_data& descriptor_data, reactor_op* op)
 {
-  mutex::scoped_lock lock(registered_descriptors_mutex_);
+  descriptor_data = allocate_descriptor_state();
 
-  descriptor_data = registered_descriptors_.alloc();
+  mutex::scoped_lock lock(descriptor_data->mutex_);
+
   descriptor_data->descriptor_ = descriptor;
   descriptor_data->shutdown_ = false;
   descriptor_data->op_queue_[op_type].push(op);
@@ -176,13 +178,13 @@ void kqueue_reactor::move_descriptor(socket_type,
 }
 
 void kqueue_reactor::start_op(int op_type, socket_type descriptor,
-    kqueue_reactor::per_descriptor_data& descriptor_data,
-    reactor_op* op, bool allow_speculative)
+    kqueue_reactor::per_descriptor_data& descriptor_data, reactor_op* op,
+    bool is_continuation, bool allow_speculative)
 {
   if (!descriptor_data)
   {
     op->ec_ = boost::asio::error::bad_descriptor;
-    post_immediate_completion(op);
+    post_immediate_completion(op, is_continuation);
     return;
   }
 
@@ -190,7 +192,7 @@ void kqueue_reactor::start_op(int op_type, socket_type descriptor,
 
   if (descriptor_data->shutdown_)
   {
-    post_immediate_completion(op);
+    post_immediate_completion(op, is_continuation);
     return;
   }
 
@@ -204,7 +206,7 @@ void kqueue_reactor::start_op(int op_type, socket_type descriptor,
         if (op->perform())
         {
           descriptor_lock.unlock();
-          io_service_.post_immediate_completion(op);
+          io_service_.post_immediate_completion(op, is_continuation);
           return;
         }
       }
@@ -276,7 +278,6 @@ void kqueue_reactor::deregister_descriptor(socket_type descriptor,
     return;
 
   mutex::scoped_lock descriptor_lock(descriptor_data->mutex_);
-  mutex::scoped_lock descriptors_lock(registered_descriptors_mutex_);
 
   if (!descriptor_data->shutdown_)
   {
@@ -311,10 +312,8 @@ void kqueue_reactor::deregister_descriptor(socket_type descriptor,
 
     descriptor_lock.unlock();
 
-    registered_descriptors_.free(descriptor_data);
+    free_descriptor_state(descriptor_data);
     descriptor_data = 0;
-
-    descriptors_lock.unlock();
 
     io_service_.post_deferred_completions(ops);
   }
@@ -327,7 +326,6 @@ void kqueue_reactor::deregister_internal_descriptor(socket_type descriptor,
     return;
 
   mutex::scoped_lock descriptor_lock(descriptor_data->mutex_);
-  mutex::scoped_lock descriptors_lock(registered_descriptors_mutex_);
 
   if (!descriptor_data->shutdown_)
   {
@@ -347,10 +345,8 @@ void kqueue_reactor::deregister_internal_descriptor(socket_type descriptor,
 
     descriptor_lock.unlock();
 
-    registered_descriptors_.free(descriptor_data);
+    free_descriptor_state(descriptor_data);
     descriptor_data = 0;
-
-    descriptors_lock.unlock();
   }
 }
 
@@ -371,7 +367,7 @@ void kqueue_reactor::run(bool block, op_queue<operation>& ops)
   // Dispatch the waiting events.
   for (int i = 0; i < num_events; ++i)
   {
-    int descriptor = events[i].ident;
+    int descriptor = static_cast<int>(events[i].ident);
     void* ptr = reinterpret_cast<void*>(events[i].udata);
     if (ptr == &interrupter_)
     {
@@ -401,7 +397,8 @@ void kqueue_reactor::run(bool block, op_queue<operation>& ops)
             {
               if (events[i].flags & EV_ERROR)
               {
-                op->ec_ = boost::system::error_code(events[i].data,
+                op->ec_ = boost::system::error_code(
+                    static_cast<int>(events[i].data),
                     boost::asio::error::get_system_category());
                 descriptor_data->op_queue_[j].pop();
                 ops.push(op);
@@ -481,6 +478,18 @@ int kqueue_reactor::do_kqueue_create()
     boost::asio::detail::throw_error(ec, "kqueue");
   }
   return fd;
+}
+
+kqueue_reactor::descriptor_state* kqueue_reactor::allocate_descriptor_state()
+{
+  mutex::scoped_lock descriptors_lock(registered_descriptors_mutex_);
+  return registered_descriptors_.alloc();
+}
+
+void kqueue_reactor::free_descriptor_state(kqueue_reactor::descriptor_state* s)
+{
+  mutex::scoped_lock descriptors_lock(registered_descriptors_mutex_);
+  registered_descriptors_.free(s);
 }
 
 void kqueue_reactor::do_add_timer_queue(timer_queue_base& queue)

@@ -9,7 +9,7 @@
 
 #include <boost/tr1/detail/config.hpp>  // for BOOST_HAS_TR1_TUPLE
 
-#ifndef BOOST_NO_0X_HDR_TUPLE
+#ifndef BOOST_NO_CXX11_HDR_TUPLE
 
 #include <tuple>
 
@@ -31,7 +31,7 @@ using ::std::tuple_element;
 
 #elif defined(BOOST_HAS_TR1_TUPLE)
 
-#include <tuple>
+#include <boost/tr1/tuple.hpp>
 
 namespace boost{ namespace math{
 
@@ -49,7 +49,7 @@ using ::std::tr1::tuple_element;
 
 }}
 
-#elif (defined(__BORLANDC__) && (__BORLANDC__ <= 0x600)) || (defined(_MSC_VER) && (_MSC_VER < 1310)) || defined(__IBMCPP__)
+#elif (defined(__BORLANDC__) && (__BORLANDC__ <= 0x600)) || defined(__IBMCPP__)
 
 #include <boost/tuple/tuple.hpp>
 #include <boost/tuple/tuple_comparison.hpp>

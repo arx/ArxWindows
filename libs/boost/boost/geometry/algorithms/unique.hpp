@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -34,9 +34,9 @@ namespace detail { namespace unique
 {
 
 
-template <typename Range, typename ComparePolicy>
 struct range_unique
 {
+    template <typename Range, typename ComparePolicy>
     static inline void apply(Range& range, ComparePolicy const& policy)
     {
         typename boost::range_iterator<Range>::type it
@@ -52,21 +52,18 @@ struct range_unique
 };
 
 
-template <typename Polygon, typename ComparePolicy>
 struct polygon_unique
 {
+    template <typename Polygon, typename ComparePolicy>
     static inline void apply(Polygon& polygon, ComparePolicy const& policy)
     {
-        typedef typename geometry::ring_type<Polygon>::type ring_type;
-
-        typedef range_unique<ring_type, ComparePolicy> per_range;
-        per_range::apply(exterior_ring(polygon), policy);
+        range_unique::apply(exterior_ring(polygon), policy);
 
         typename interior_return_type<Polygon>::type rings
                     = interior_rings(polygon);
         for (BOOST_AUTO_TPL(it, boost::begin(rings)); it != boost::end(rings); ++it)
         {
-            per_range::apply(*it, policy);
+            range_unique::apply(*it, policy);
         }
     }
 };
@@ -85,32 +82,32 @@ namespace dispatch
 
 template
 <
-    typename Tag,
     typename Geometry,
-    typename ComparePolicy
+    typename Tag = typename tag<Geometry>::type
 >
 struct unique
 {
+    template <typename ComparePolicy>
     static inline void apply(Geometry&, ComparePolicy const& )
     {}
 };
 
 
-template <typename Ring, typename ComparePolicy>
-struct unique<ring_tag, Ring, ComparePolicy>
-    : detail::unique::range_unique<Ring, ComparePolicy>
+template <typename Ring>
+struct unique<Ring, ring_tag>
+    : detail::unique::range_unique
 {};
 
 
-template <typename LineString, typename ComparePolicy>
-struct unique<linestring_tag, LineString, ComparePolicy>
-    : detail::unique::range_unique<LineString, ComparePolicy>
+template <typename LineString>
+struct unique<LineString, linestring_tag>
+    : detail::unique::range_unique
 {};
 
 
-template <typename Polygon, typename ComparePolicy>
-struct unique<polygon_tag, Polygon, ComparePolicy>
-    : detail::unique::polygon_unique<Polygon, ComparePolicy>
+template <typename Polygon>
+struct unique<Polygon, polygon_tag>
+    : detail::unique::polygon_unique
 {};
 
 
@@ -139,12 +136,7 @@ inline void unique(Geometry& geometry)
         > policy;
 
 
-    dispatch::unique
-        <
-            typename tag<Geometry>::type,
-            Geometry,
-            policy
-        >::apply(geometry, policy());
+    dispatch::unique<Geometry>::apply(geometry, policy());
 }
 
 }} // namespace boost::geometry
