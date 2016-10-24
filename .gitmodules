@@ -1,0 +1,10 @@
+[submodule "arx"]
+	path = arx
+	url = git://github.com/arx/ArxLibertatis.git
+	branch = master
+	shallow = true
+[submodule "data"]
+	path = data
+	url = git://github.com/arx/ArxLibertatisData.git
+	branch = master
+	shallow = true
