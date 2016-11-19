@@ -25,4 +25,9 @@ endif()
 
 set(DATA_FILES "${CMAKE_CURRENT_LIST_DIR}/data")
 
+if(NOT DEFINED BUILD_TESTS)
+	# TODO Add CppUnit library
+	set(BUILD_TESTS OFF)
+endif()
+
 add_subdirectory("arx")
