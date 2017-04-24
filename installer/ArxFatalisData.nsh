@@ -322,37 +322,84 @@ FunctionEnd
 !macroend
 
 ; Checksums of speech.pak used to detect languages.
-!define speech_checksum_de   "4c3fdb1f702700255924afde49081b6e"
-!define speech_checksum_de_2 "ab8a93161688d793a7c78fbefd7d133e"
-!define speech_checksum_en   "4e8f962d8204bcfd79ce6f3226d6d6de"
-!define speech_checksum_es   "2f88c67ae1537919e69386d27583125b"
-!define speech_checksum_fr   "4edf9f8c799190590b4cd52cfa5f91b1"
-!define speech_checksum_it   "81f05dea47c52d43f01c9b44dd8fe962"
-!define speech_checksum_ru   "677163bc319cd1e9aa1b53b5fb3e9402"
-!define speech_checksum_demo "62ca7b1751c0615ee131a94f0856b389"
+!define speech_checksum_de      "4c3fdb1f702700255924afde49081b6e"
+!define speech_checksum_de_2    "ab8a93161688d793a7c78fbefd7d133e"
+!define speech_checksum_en      "4e8f962d8204bcfd79ce6f3226d6d6de"
+!define speech_checksum_es      "2f88c67ae1537919e69386d27583125b"
+!define speech_checksum_fr      "4edf9f8c799190590b4cd52cfa5f91b1"
+!define speech_checksum_it      "81f05dea47c52d43f01c9b44dd8fe962"
+!define speech_checksum_jp      "235b86700fc80b3eb86731d748013a38"
+!define speech_checksum_ru      "677163bc319cd1e9aa1b53b5fb3e9402"
+!define speech_checksum_ru_2    "5df8ba0d4ec58bd43d04307eb4c06d86"
+!define speech_checksum_demo_de "a424fcfc46dd4f11b04030efac15a668"
+!define speech_checksum_demo_en "62ca7b1751c0615ee131a94f0856b389"
+!define speech_checksum_demo_fr "09038e43508232c44537c162f9e3ecde"
+!define speech_checksum_demo_jp "eeacbd9a845ecc00054934e82e9d7dd3"
 
 Function CopyArxDataFiles
 	; $0 = ArxFatalisInstallDir
-	; $1 = Language (one of "de", "en", "es", "fr", "it", "ru" or "demo")
+	; $1 = Language (one of "de", "en", "es", "fr", "it", "jp", "ru", "demo_de", "demo_en", "demo_fr" or "demo_jp")
 	Pop $0
 	Pop $1
 	
 	ClearErrors
 	StrCpy $NbErrors 0
 	
-	${If} $1 == "demo"
+	${If} $1 == "demo_de"
 		DetailPrint "Creating directories..."
 		${CreateDirectory} "$INSTDIR"
 		${CreateDirectory} "$INSTDIR\misc"
 		
-		DetailPrint "Copying demo data files..."
+		DetailPrint "Copying german demo data files..."
+		${CopyAndValidateFile} "143ba491a357263a2dfad9936a66eeb6" $0 "" "data2.pak"
+		${CopyAndValidateFile} "5d7ba6e6c79ebf7fbb232eaced9e8ad9" $0 "" "data.pak"
+		${CopyAndValidateFile} "87accec0658aa109a3efa8b41aab61df" $0 "" "loc.pak"
+		${CopyAndValidateFile} "9a95ff96795c034524ba1c2e94ea12c7" $0 "misc\" "arx.ttf"
+		${CopyAndValidateFile} "aa3dfbd4bc9c863d10a0c5345ae5a4c9" $0 "misc\" "logo.bmp"
+		${CopyAndValidateFile} "ea1b3e6d6f4906905d4a34f07e9a59ac" $0 "" "sfx.pak"
+		${CopyAndValidateFile} ${speech_checksum_demo_de}         $0 "" "speech.pak"
+	
+	${If} $1 == "demo_en"
+		DetailPrint "Creating directories..."
+		${CreateDirectory} "$INSTDIR"
+		${CreateDirectory} "$INSTDIR\misc"
+		
+		DetailPrint "Copying english demo data files..."
 		${CopyAndValidateFile} "958b78f8f370b06d769843137138c461" $0 "" "data2.pak"
 		${CopyAndValidateFile} "5d7ba6e6c79ebf7fbb232eaced9e8ad9" $0 "" "data.pak"
 		${CopyAndValidateFile} "2ae16d3925c597dca70f960f175def3a" $0 "" "loc.pak"
 		${CopyAndValidateFile} "9a95ff96795c034524ba1c2e94ea12c7" $0 "misc\" "arx.ttf"
 		${CopyAndValidateFile} "aa3dfbd4bc9c863d10a0c5345ae5a4c9" $0 "misc\" "logo.bmp"
 		${CopyAndValidateFile} "ea1b3e6d6f4906905d4a34f07e9a59ac" $0 "" "sfx.pak"
-		${CopyAndValidateFile} "62ca7b1751c0615ee131a94f0856b389" $0 "" "speech.pak"
+		${CopyAndValidateFile} ${speech_checksum_demo_en}         $0 "" "speech.pak"
+	
+	${If} $1 == "demo_fr"
+		DetailPrint "Creating directories..."
+		${CreateDirectory} "$INSTDIR"
+		${CreateDirectory} "$INSTDIR\misc"
+		
+		DetailPrint "Copying french demo data files..."
+		${CopyAndValidateFile} "8dc1d1b3e85d4a41ae320aa3fa9c649a" $0 "" "data2.pak"
+		${CopyAndValidateFile} "5d7ba6e6c79ebf7fbb232eaced9e8ad9" $0 "" "data.pak"
+		${CopyAndValidateFile} "4a8ac68341d4758a32d9cd04955b115e" $0 "" "loc.pak"
+		${CopyAndValidateFile} "9a95ff96795c034524ba1c2e94ea12c7" $0 "misc\" "arx.ttf"
+		${CopyAndValidateFile} "aa3dfbd4bc9c863d10a0c5345ae5a4c9" $0 "misc\" "logo.bmp"
+		${CopyAndValidateFile} "ea1b3e6d6f4906905d4a34f07e9a59ac" $0 "" "sfx.pak"
+		${CopyAndValidateFile} ${speech_checksum_demo_fr}         $0 "" "speech.pak"
+	
+	${If} $1 == "demo_jp"
+		DetailPrint "Creating directories..."
+		${CreateDirectory} "$INSTDIR"
+		${CreateDirectory} "$INSTDIR\misc"
+		
+		DetailPrint "Copying japanese demo data files..."
+		${CopyAndValidateFile} "958b78f8f370b06d769843137138c461" $0 "" "data2.pak"
+		${CopyAndValidateFile} "903dfe1878a0cedff3b941fd3aa22ba9" $0 "" "data.pak"
+		${CopyAndValidateFile} "9d84cede805b13fdf7fce856ecc15b19" $0 "" "loc.pak"
+		${CopyAndValidateFile} "58eab00842d8adea8d553ae1f66b0c9b" $0 "misc\" "arx.ttf"
+		${CopyAndValidateFile} "aa3dfbd4bc9c863d10a0c5345ae5a4c9" $0 "misc\" "logo.bmp"
+		${CopyAndValidateFile} "ea1b3e6d6f4906905d4a34f07e9a59ac" $0 "" "sfx.pak"
+		${CopyAndValidateFile} ${speech_checksum_demo_jp}         $0 "" "speech.pak"
 		
 	${Else}
 		DetailPrint "Creating directories..."
@@ -397,13 +444,18 @@ Function CopyArxDataFiles
 		${CopyAndValidateFile} "0b220bffaedc89fa663f08d12630c342" $0 "graph\obj3d\textures\" "npc_worm_body_part1.jpg"
 		${CopyAndValidateFile} "20797cb78f6393a0fb5405969ba9f805" $0 "graph\obj3d\textures\" "npc_worm_body_part2.bmp"
 		${CopyAndValidateFile} "00d0b018e995e7d013d6e52e92126901" $0 "graph\obj3d\textures\" "[wood]_light_door.jpg"
-		${CopyAndValidateFile} "9a95ff96795c034524ba1c2e94ea12c7" $0 "misc\" "arx_default.ttf"
 		${CopyAndValidateFile} "921561e83786efcd25f92147b60a13db" $0 "misc\" "arx_russian.ttf"
 		${CopyAndValidateFile} "da59198061cef0761c6b2fca113f76f6" $0 "misc\" "arx_taiwanese.ttf"
 		${CopyAndValidateFile} "63ed31a4eb3d226c23e58cfaa974d484" $0 "misc\" "logo.avi"
 		${CopyAndValidateFile} "afff1099c01ffeb03b9a351f7b5966b6" $0 "misc\" "logo.bmp"
 		
-		${CopyAndValidateFile} "a88d239dc7919ab113ff45483cb4ad46 or a91a0b39a046233debbb10b4850e13eb" $0 "" "data.pak"
+		${If} $1 == "jp"
+			${CopyAndValidateFile} "58eab00842d8adea8d553ae1f66b0c9b" $0 "misc\" "arx_default.ttf"
+		${Else}
+			${CopyAndValidateFile} "9a95ff96795c034524ba1c2e94ea12c7" $0 "misc\" "arx_default.ttf"
+		${EndIf}
+		
+		${CopyAndValidateFile} "a91a0b39a046233debbb10b4850e13eb or a88d239dc7919ab113ff45483cb4ad46 or 7ae3632eef92700cd6c5e143aa0fe67b or b297ab9ae41a593b13cbdd0ecaf1f999" $0 "" "data.pak"
 		
 		${Switch} $1
 			${Case} "de"
@@ -437,10 +489,16 @@ Function CopyArxDataFiles
 				${CopyAndValidateFile} ${speech_checksum_it}              $0 "" "speech.pak"
 				${Break}
 	
+			${Case} "jp"
+				DetailPrint "Copying japanese data files..."
+				${CopyAndValidateFile} "a9e162f2916f5737a95bd8c5bd8a979e" $0 "" "loc.pak"
+				${CopyAndValidateFile} ${speech_checksum_jp}              $0 "" "speech.pak"
+				${Break}
+	
 			${Case} "ru"
 				DetailPrint "Copying russian data files..."
-				${CopyAndValidateFile} "a131bf2398ee70a9c22a2bbffd9d0d99" $0 "" "loc.pak"
-				${CopyAndValidateFile} ${speech_checksum_ru}              $0 "" "speech.pak"
+				${CopyAndValidateFile} "9dcb0f5d7a517be4f1d9190419900892" $0 "" "loc.pak"
+				${CopyAndValidateFile} "${speech_checksum_ru} or ${speech_checksum_ru_2}" $0 "" "speech.pak"
 				${Break}
 		${EndSwitch}
 	${EndIf}
@@ -503,11 +561,24 @@ Function DetectArxLanguage
 			${Break}
 			
 		${Case} ${speech_checksum_ru}
+		${Case} ${speech_checksum_ru_2}
 			StrCpy $3 "ru"
 			${Break}
 			
-		${Case} ${speech_checksum_demo}
-			StrCpy $3 "demo"
+		${Case} ${speech_checksum_demo_de}
+			StrCpy $3 "demo_de"
+			${Break}
+			
+		${Case} ${speech_checksum_demo_en}
+			StrCpy $3 "demo_en"
+			${Break}
+			
+		${Case} ${speech_checksum_demo_fr}
+			StrCpy $3 "demo_fr"
+			${Break}
+			
+		${Case} ${speech_checksum_demo_jp}
+			StrCpy $3 "demo_jp"
 			${Break}
 			
 		${Default}
