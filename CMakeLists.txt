@@ -4,13 +4,13 @@ cmake_minimum_required(VERSION 2.8.5)
 
 set(libs "${CMAKE_CURRENT_LIST_DIR}/libs")
 set(CMAKE_PREFIX_PATH
-	"${libs}/zlib"
-	"${libs}/freetype"
-	"${libs}/openal"
 	"${libs}/boost"
+	"${libs}/freetype"
 	"${libs}/glm"
-	"${libs}/opengl"
+	"${libs}/libepoxy"
+	"${libs}/openal"
 	"${libs}/sdl"
+	"${libs}/zlib"
 )
 
 if(DEFINED CMAKE_FIND_ROOT_PATH)
