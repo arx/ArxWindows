@@ -1,7 +1,7 @@
 ## ArxWindows - Libraries and scripts for Arx Libertatis development under Windows
 
-This repository contains everything that you need to build the game in both 32-bit and 64-bit under Windows.
-It also contains the necessary to build installers for Arx Libertatis.
+This repository contains everything that you need to build [Arx Libertatis](http://arx-libertatis.org/) in both 32-bit and 64-bit under Windows.
+It also contains the necessary to build installers for the game.
 
 
 ### Libraries
@@ -10,10 +10,9 @@ It also contains the necessary to build installers for Arx Libertatis.
 * [GLM](http://glm.g-truc.net/)
 * [FreeType](http://www.freetype.org/)
 * [OpenAL](http://connect.creativelabs.com/openal/)
-* [OpenGL](http://www.opengl.org/registry/)
-* [GLEW](http://glew.sourceforge.net/)
-* [SDL](http://www.libsdl.org/)
-* [ZLib](http://zlib.net/)
+* [libepoxy](https://github.com/anholt/libepoxy)
+* [SDL2](http://www.libsdl.org/)
+* [zLib](http://zlib.net/)
 
 Additionally, you'll need the following libraries to build the Crash Reporter:
 
@@ -23,33 +22,42 @@ Additionally, you'll need the following libraries to build the Crash Reporter:
 
 #### How to setup
 
-1. Download the content of this repository to your PC
+[Detailed instructions are available on the wiki.](http://wiki.arx-libertatis.org/Downloading_and_Compiling_under_Windows)
 
-        Let's say in "E:\git\ArxWindows\..."
+1. Download the content of this repository to your PC, for example in [GitBash](Git for Windows):
 
-2. Add the following environment variable:
+       cd /c/Code/git
+       git clone git://github.com/arx/ArxWindows.git --depth 1
 
-        CMAKE_PREFIX_PATH
-and set its value to
+2. Download the Arx Libertatis source code:
 
-        E:\git\ArxWindows\libs\zlib;E:\git\ArxWindows\libs\freetype;E:\git\ArxWindows\libs\openal;E:\git\ArxWindows\libs\boost;E:\git\ArxWindows\libs\glm;E:\git\ArxWindows\libs\opengl;E:\git\ArxWindows\libs\sdl;E:\git\ArxWindows\libs\dbghelp
+       cd /c/Code/git/ArxWindows
+       git submodule update --init --remote --recursive
 
-3. Copy the necessary DLLs to the game binary folder (arx\bin). Those marked with a (*) are only needed for the Crash Reporter, 
+3. Make sure Arx Libertatis is at the desired branch/tag/commit:
 
->>For 32-bit:
->>
-        E:\git\ArxWindows\libs\sdl\bin\SDL32.dll
-        E:\git\ArxWindows\libs\dbghelp\bin\x86\dbghelp.dll (*)
-        E:\git\ArxWindows\libs\dbghelp\bin\x86\symserv.dll (*)
-        %QTDIR%\bin\QtCore4.dll (*)
-        %QTDIR%\bin\QtGui4.dll (*)
-        %QTDIR%\bin\QtNetwork4.dll (*)
-        
->>For 64-bit:
->>
-        E:\git\ArxWindows\libs\sdl\bin\SDL64.dll
-        E:\git\ArxWindows\libs\dbghelp\bin\x64\dbghelp.dll (*)
-        E:\git\ArxWindows\libs\dbghelp\bin\x64\symserv.dll (*)
-        %QTDIR%\bin\QtCore4.dll (*)
-        %QTDIR%\bin\QtGui4.dll (*)
-        %QTDIR%\bin\QtNetwork4.dll (*)
+       cd /c/Code/git/ArxWindows/arx
+       git checkout master
+
+4. Generating the project files
+
+       cd /c/Code/git/ArxWindows
+       mkdir build_vc15
+       cd build_vc15
+       cmake .. -G "Visual Studio 15 2017"
+
+   Replace `"Visual Studio 15 2017"` with the desired [CMake generator name](https://cmake.org/cmake/help/latest/manual/cmake-generators.7.html), for example `"Visual Studio 15 2017 Win64"` for 64-bit builds.
+
+5. Build the generated solution in Visual Studio
+
+6. Copy the necessary DLLs to the game binary folder (build_vc15).
+
+   For 32-bit:
+
+       libs\sdl\bin\x86\SDL2.dll
+       libs\openal\bin\x86\OpenAL32.dll
+
+   For 64-bit:
+
+       libs\sdl\bin\x64\SDL2.dll
+       libs\openal\bin\x64\OpenAL32.dll
