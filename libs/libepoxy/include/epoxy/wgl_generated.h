@@ -1,5 +1,20 @@
 /* GL dispatch header.
  * This is code-generated from the GL API XML files from Khronos.
+ * 
+ * Copyright (c) 2013-2017 The Khronos Group Inc.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
  */
 
 #pragma once
@@ -33,6 +48,7 @@ typedef struct _GPU_DEVICE *PGPU_DEVICE;
 #define WGL_ARB_buffer_region 1
 #define WGL_ARB_context_flush_control 1
 #define WGL_ARB_create_context 1
+#define WGL_ARB_create_context_no_error 1
 #define WGL_ARB_create_context_profile 1
 #define WGL_ARB_create_context_robustness 1
 #define WGL_ARB_extensions_string 1
@@ -366,6 +382,7 @@ typedef struct _GPU_DEVICE *PGPU_DEVICE;
 #define WGL_COLORSPACE_EXT                               0x3087
 #define WGL_COLORSPACE_SRGB_EXT                          0x3089
 #define WGL_COLORSPACE_LINEAR_EXT                        0x308A
+#define WGL_CONTEXT_OPENGL_NO_ERROR_ARB                  0x31B3
 #define WGL_SWAP_UNDERLAY15                              0x40000000
 #define WGL_LOSE_CONTEXT_ON_RESET_ARB                    0x8252
 #define WGL_CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB      0x8256
