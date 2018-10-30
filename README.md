@@ -9,7 +9,7 @@ It also contains the necessary to build installers for the game.
 * [Boost](http://www.boost.org/) (headers only)
 * [GLM](http://glm.g-truc.net/)
 * [FreeType](http://www.freetype.org/)
-* [OpenAL](http://connect.creativelabs.com/openal/)
+* [OpenAL Soft](http://openal-soft.org/)
 * [libepoxy](https://github.com/anholt/libepoxy)
 * [SDL2](http://www.libsdl.org/)
 * [zLib](http://zlib.net/)
