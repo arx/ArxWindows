@@ -1,6 +1,6 @@
 ## ArxWindows - Libraries and scripts for Arx Libertatis development under Windows
 
-This repository contains everything that you need to build [Arx Libertatis](http://arx-libertatis.org/) in both 32-bit and 64-bit under Windows.
+This repository contains everything that you need to build [Arx Libertatis](http://arx-libertatis.org/) in both 32-bit and 64-bit under Windows with MSVC 2015 or newer.
 It also contains the necessary to build installers for the game.
 
 
