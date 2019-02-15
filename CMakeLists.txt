@@ -39,13 +39,14 @@ endif()
 
 add_subdirectory("arx")
 
+add_custom_target(copy-libs ALL)
 foreach(prefix IN LISTS CMAKE_PREFIX_PATH)
 	set(libdir "${prefix}/bin/${CMAKE_LIBRARY_ARCHITECTURE}")
 	if(IS_DIRECTORY "${libdir}")
 		file(GLOB libs RELATIVE "${libdir}" *)
 		foreach(lib IN LISTS libs)
 			add_custom_command(
-				TARGET arx POST_BUILD
+				TARGET copy-libs POST_BUILD
 				COMMAND ${CMAKE_COMMAND} -E copy_if_different "${libdir}/${lib}" "$<TARGET_FILE_DIR:arx>/${lib}"
 			)
 		endforeach()
