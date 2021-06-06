@@ -54,11 +54,35 @@ inline bool wait_until(
         const std::chrono::time_point<Clock, Duration>& time_out,
         std::error_code & ec) noexcept
 {
-
     ::sigset_t  sigset;
 
-    ::sigemptyset(&sigset);
-    ::sigaddset(&sigset, SIGCHLD);
+    //I need to set the signal, because it might be ignore / default, in which case sigwait might not work.
+
+    using _signal_t = void(*)(int);
+    static thread_local _signal_t sigchld_handler = SIG_DFL;
+
+    struct signal_interceptor_t
+    {
+        static void handler_func(int val)
+        {
+            if ((sigchld_handler != SIG_DFL) && (sigchld_handler != SIG_IGN))
+                sigchld_handler(val);
+        }
+        signal_interceptor_t()  { sigchld_handler = ::signal(SIGCHLD, &handler_func); }
+        ~signal_interceptor_t() { ::signal(SIGCHLD, sigchld_handler); sigchld_handler = SIG_DFL;}
+
+    } signal_interceptor{};
+
+    if (sigemptyset(&sigset) != 0)
+    {
+        ec = get_last_error();
+        return false;
+    }
+    if (sigaddset(&sigset, SIGCHLD) != 0)
+    {
+        ec = get_last_error();
+        return false;
+    }
 
     auto get_timespec = 
             [](const Duration & dur)
@@ -69,8 +93,8 @@ inline bool wait_until(
                 return ts;
             };
 
-    pid_t ret;
-    int status;
+    int ret;
+    int status{0};
 
     struct ::sigaction old_sig;
     if (-1 == ::sigaction(SIGCHLD, nullptr, &old_sig))
@@ -81,6 +105,7 @@ inline bool wait_until(
 
     bool timed_out;
 
+#if defined(BOOST_POSIX_HAS_SIGTIMEDWAIT)
     do
     {
         auto ts = get_timespec(time_out - Clock::now());
@@ -101,6 +126,70 @@ inline bool wait_until(
     while ((ret == 0) ||
           (((ret == -1) && errno == EINTR) ||
            ((ret != -1) && !WIFEXITED(status) && !WIFSIGNALED(status))));
+#else
+    //if we do not have sigtimedwait, we fork off a child process  to get the signal in time
+    pid_t timeout_pid = ::fork();
+    if (timeout_pid  == -1)
+    {
+        ec = boost::process::detail::get_last_error();
+        return true;
+    }
+    else if (timeout_pid == 0)
+    {
+        auto ts = get_timespec(time_out - Clock::now());
+        ::timespec rem;
+        while (ts.tv_sec > 0 || ts.tv_nsec > 0)
+        {
+            if (::nanosleep(&ts, &rem) != 0)
+            {
+                auto err = errno;
+                if ((err == EINVAL) || (err == EFAULT))
+                    break;
+            }
+            ts = get_timespec(time_out - Clock::now());
+        }
+        ::exit(0);
+    }
+
+    struct child_cleaner_t
+    {
+        pid_t pid;
+        ~child_cleaner_t()
+        {
+            int res;
+            ::kill(pid, SIGKILL);
+            ::waitpid(pid, &res, WNOHANG);
+        }
+    };
+    child_cleaner_t child_cleaner{timeout_pid};
+
+    do
+    {
+        int sig_{0};
+        if ((::waitpid(timeout_pid, &status, WNOHANG) != 0)
+            && (WIFEXITED(status) || WIFSIGNALED(status)))
+
+            return false;
+
+        ret = ::sigwait(&sigset, &sig_);
+        errno = 0;
+
+        if ((sig_ == SIGCHLD) &&
+            (old_sig.sa_handler != SIG_DFL) && (old_sig.sa_handler != SIG_IGN))
+            old_sig.sa_handler(ret);
+
+        ret = ::waitpid(p.pid, &status, WNOHANG);
+        if (ret == 0) // == > is running
+        {
+            timed_out = Clock::now() >= time_out;
+            if (timed_out)
+                return false;
+        }
+    }
+    while ((ret == 0) ||
+           (((ret == -1) && errno == EINTR) ||
+            ((ret != -1) && !WIFEXITED(status) && !WIFSIGNALED(status))));
+#endif
 
     if (ret == -1)
         ec = boost::process::detail::get_last_error();

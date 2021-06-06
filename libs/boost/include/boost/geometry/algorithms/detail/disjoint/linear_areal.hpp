@@ -5,8 +5,8 @@
 // Copyright (c) 2009-2014 Mateusz Loskot, London, UK.
 // Copyright (c) 2013-2014 Adam Wulkiewicz, Lodz, Poland.
 
-// This file was modified by Oracle on 2013-2017.
-// Modifications copyright (c) 2013-2017, Oracle and/or its affiliates.
+// This file was modified by Oracle on 2013-2020.
+// Modifications copyright (c) 2013-2020, Oracle and/or its affiliates.
 
 // Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 // Contributed and/or modified by Menelaos Karavelas, on behalf of Oracle
@@ -23,7 +23,9 @@
 
 #include <iterator>
 
-#include <boost/range.hpp>
+#include <boost/range/begin.hpp>
+#include <boost/range/end.hpp>
+#include <boost/range/value_type.hpp>
 
 #include <boost/geometry/core/closure.hpp>
 #include <boost/geometry/core/point_type.hpp>
@@ -41,8 +43,9 @@
 #include <boost/geometry/algorithms/detail/check_iterator_range.hpp>
 #include <boost/geometry/algorithms/detail/point_on_border.hpp>
 
-#include <boost/geometry/algorithms/detail/disjoint/multirange_geometry.hpp>
+#include <boost/geometry/algorithms/detail/disjoint/linear_linear.hpp>
 #include <boost/geometry/algorithms/detail/disjoint/linear_segment_or_box.hpp>
+#include <boost/geometry/algorithms/detail/disjoint/multirange_geometry.hpp>
 #include <boost/geometry/algorithms/detail/disjoint/point_box.hpp>
 #include <boost/geometry/algorithms/detail/disjoint/segment_box.hpp>
 
@@ -71,7 +74,7 @@ struct disjoint_no_intersections_policy
         point1_type p;
         geometry::point_on_border(p, g1);
 
-        return !geometry::covered_by(p, g2, strategy);
+        return ! geometry::covered_by(p, g2, strategy);
     }
 };
 
@@ -117,9 +120,7 @@ struct disjoint_linear_areal
             return false;
         }
 
-        return NoIntersectionsPolicy
-                ::apply(g1, g2,
-                        strategy.template get_point_in_geometry_strategy<Geometry1, Geometry2>());
+        return NoIntersectionsPolicy::apply(g1, g2, strategy);
     }
 };
 
@@ -192,8 +193,7 @@ public:
         typename point_type<Segment>::type p;
         detail::assign_point_from_index<0>(segment, p);
 
-        return !geometry::covered_by(p, polygon,
-                    strategy.template get_point_in_geometry_strategy<Segment, Polygon>());
+        return ! geometry::covered_by(p, polygon, strategy);
     }
 };
 
@@ -232,8 +232,7 @@ struct disjoint_segment_areal<Segment, Ring, ring_tag>
         typename point_type<Segment>::type p;
         detail::assign_point_from_index<0>(segment, p);
 
-        return !geometry::covered_by(p, ring,
-                    strategy.template get_point_in_geometry_strategy<Segment, Ring>());
+        return ! geometry::covered_by(p, ring, strategy);
     }
 };
 

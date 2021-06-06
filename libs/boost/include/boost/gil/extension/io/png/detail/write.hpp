@@ -11,12 +11,11 @@
 #include <boost/gil/extension/io/png/detail/writer_backend.hpp>
 
 #include <boost/gil/io/device.hpp>
+#include <boost/gil/io/dynamic_io_new.hpp>
 #include <boost/gil/io/row_buffer_helper.hpp>
+#include <boost/gil/detail/mp11.hpp>
 
-#include <boost/mpl/and.hpp>
-#include <boost/mpl/equal_to.hpp>
-#include <boost/mpl/less.hpp>
-#include <boost/mpl/not.hpp>
+#include <type_traits>
 
 namespace boost { namespace gil {
 
@@ -53,7 +52,7 @@ class writer< Device
 
 public:
 
-    typedef writer_backend< Device , png_tag > backend_t;
+    using backend_t = writer_backend<Device, png_tag>;
 
     writer( const Device&                      io_dev
           , const image_write_info< png_tag >& info
@@ -82,14 +81,16 @@ private:
 
     template<typename View>
     void write_view( const View& view
-                   ,  mpl::false_       // is bit aligned
+                   ,  std::false_type       // is bit aligned
                    )
     {
-        typedef typename get_pixel_type< View >::type pixel_t;
+        using pixel_t = typename get_pixel_type<View>::type;
 
-        typedef detail::png_write_support< typename channel_type    < pixel_t >::type
-                                         , typename color_space_type< pixel_t >::type
-                                         > png_rw_info;
+        using png_rw_info = detail::png_write_support
+            <
+                typename channel_type<pixel_t>::type,
+                typename color_space_type<pixel_t>::type
+            >;
 
         if( little_endian() )
         {
@@ -120,14 +121,14 @@ private:
 
     template<typename View>
     void write_view( const View& view
-                   , mpl::true_         // is bit aligned
+                   , std::true_type         // is bit aligned
                    )
     {
-        typedef detail::png_write_support< typename kth_semantic_element_type< typename View::value_type
-                                                                             , 0
-                                                                             >::type
-                                         , typename color_space_type<View>::type
-                                         > png_rw_info;
+        using png_rw_info = detail::png_write_support
+            <
+                typename kth_semantic_element_type<typename View::value_type, 0>::type,
+                typename color_space_type<View>::type
+            >;
 
         if (little_endian() )
         {
@@ -161,28 +162,46 @@ private:
                      );
     }
 
-    template< typename Info > struct is_less_than_eight : mpl::less< mpl::int_< Info::_bit_depth >, mpl::int_< 8 > > {};
-    template< typename Info > struct is_equal_to_sixteen : mpl::equal_to< mpl::int_< Info::_bit_depth >, mpl::int_< 16 > > {};
+    template<typename Info>
+    struct is_less_than_eight : mp11::mp_less
+        <
+            std::integral_constant<int, Info::_bit_depth>,
+            std::integral_constant<int, 8>
+        >
+    {};
 
-    template< typename Info >
-    void set_swap( typename enable_if< is_less_than_eight< Info > >::type* /* ptr */ = 0 )
+    template<typename Info>
+    struct is_equal_to_sixteen : mp11::mp_less
+        <
+            std::integral_constant<int, Info::_bit_depth>,
+            std::integral_constant<int, 16>
+        >
+    {};
+
+    template <typename Info>
+    void set_swap(typename std::enable_if<is_less_than_eight<Info>::value>::type* /*ptr*/ = 0)
     {
-        png_set_packswap( this->get_struct() );
+        png_set_packswap(this->get_struct());
     }
 
-    template< typename Info >
-    void set_swap( typename enable_if< is_equal_to_sixteen< Info > >::type* /* ptr */ = 0 )
+    template <typename Info>
+    void set_swap(typename std::enable_if<is_equal_to_sixteen<Info>::value>::type* /*ptr*/ = 0)
     {
-        png_set_swap( this->get_struct() );
+        png_set_swap(this->get_struct());
     }
 
-    template< typename Info >
-    void set_swap( typename enable_if< mpl::and_< mpl::not_< is_less_than_eight< Info > >
-                                                , mpl::not_< is_equal_to_sixteen< Info > >
-                                                >
-                                     >::type* /* ptr */ = 0
-                 )
-    {}
+    template <typename Info>
+    void set_swap(
+        typename std::enable_if
+        <
+            mp11::mp_and
+            <
+                mp11::mp_not<is_less_than_eight<Info>>,
+                mp11::mp_not<is_equal_to_sixteen<Info>>
+            >::value
+        >::type* /*ptr*/ = nullptr)
+    {
+    }
 };
 
 ///
@@ -196,9 +215,7 @@ class dynamic_image_writer< Device
                    , png_tag
                    >
 {
-    typedef writer< Device
-                  , png_tag
-                  > parent_t;
+    using parent_t = writer<Device, png_tag>;
 
 public:
 
@@ -210,8 +227,8 @@ public:
               )
     {}
 
-    template< typename Views >
-    void apply( const any_image_view< Views >& views )
+    template< typename ...Views >
+    void apply( const any_image_view< Views... >& views )
     {
         detail::dynamic_io_fnobj< detail::png_write_is_supported
                                 , parent_t

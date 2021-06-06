@@ -3,8 +3,8 @@
 // Copyright (c) 2012-2014 Barend Gehrels, Amsterdam, the Netherlands.
 // Copyright (c) 2017 Adam Wulkiewicz, Lodz, Poland.
 
-// This file was modified by Oracle on 2017.
-// Modifications copyright (c) 2017 Oracle and/or its affiliates.
+// This file was modified by Oracle on 2017-2020.
+// Modifications copyright (c) 2017-2020 Oracle and/or its affiliates.
 // Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 
 // Use, modification and distribution is subject to the Boost Software License,
@@ -15,10 +15,12 @@
 #define BOOST_GEOMETRY_ALGORITHMS_DETAIL_BUFFER_GET_PIECE_TURNS_HPP
 
 #include <boost/core/ignore_unused.hpp>
-#include <boost/range.hpp>
+#include <boost/range/begin.hpp>
+#include <boost/range/end.hpp>
+#include <boost/range/value_type.hpp>
 
+#include <boost/geometry/core/assert.hpp>
 #include <boost/geometry/algorithms/equals.hpp>
-#include <boost/geometry/algorithms/expand.hpp>
 #include <boost/geometry/algorithms/detail/disjoint/box_box.hpp>
 #include <boost/geometry/algorithms/detail/overlay/segment_identifier.hpp>
 #include <boost/geometry/algorithms/detail/overlay/get_turn_info.hpp>
@@ -34,41 +36,88 @@ namespace boost { namespace geometry
 namespace detail { namespace buffer
 {
 
-
-#if defined(BOOST_GEOMETRY_BUFFER_USE_SIDE_OF_INTERSECTION)
-struct buffer_assign_turn
+// Implements a unique_sub_range for a buffered piece,
+// the range can return subsequent points
+// known as "i", "j" and "k" (and further),  indexed as 0,1,2,3
+template <typename Ring>
+struct unique_sub_range_from_piece
 {
-    static bool const include_no_turn = false;
-    static bool const include_degenerate = false;
-    static bool const include_opposite = false;
+    typedef typename boost::range_iterator<Ring const>::type iterator_type;
+    typedef typename geometry::point_type<Ring const>::type point_type;
 
-    template
-    <
-        typename Info,
-        typename Point1,
-        typename Point2,
-        typename IntersectionInfo
-    >
-    static inline void apply(Info& info,
-                             Point1 const& /*p1*/,
-                             Point2 const& /*p2*/,
-                             IntersectionInfo const& iinfo)
+    unique_sub_range_from_piece(Ring const& ring,
+                                iterator_type iterator_at_i, iterator_type iterator_at_j)
+        : m_ring(ring)
+        , m_iterator_at_i(iterator_at_i)
+        , m_iterator_at_j(iterator_at_j)
+        , m_point_retrieved(false)
+    {}
+
+    static inline bool is_first_segment() { return false; }
+    static inline bool is_last_segment() { return false; }
+
+    static inline std::size_t size() { return 3u; }
+
+    inline point_type const& at(std::size_t index) const
     {
-        info.rob_pi = iinfo.rpi();
-        info.rob_pj = iinfo.rpj();
-        info.rob_qi = iinfo.rqi();
-        info.rob_qj = iinfo.rqj();
+        BOOST_GEOMETRY_ASSERT(index < size());
+        switch (index)
+        {
+            case 0 : return *m_iterator_at_i;
+            case 1 : return *m_iterator_at_j;
+            case 2 : return get_point_k();
+            default : return *m_iterator_at_i;
+        }
     }
 
+private :
+
+    inline point_type const& get_point_k() const
+    {
+        if (! m_point_retrieved)
+        {
+            m_iterator_at_k = advance_one(m_iterator_at_j);
+            m_point_retrieved = true;
+        }
+        return *m_iterator_at_k;
+    }
+
+    inline void circular_advance_one(iterator_type& next) const
+    {
+        ++next;
+        if (next == boost::end(m_ring))
+        {
+            next = boost::begin(m_ring) + 1;
+        }
+    }
+
+    inline iterator_type advance_one(iterator_type it) const
+    {
+        iterator_type result = it;
+        circular_advance_one(result);
+
+        // TODO: we could also use piece-boundaries
+        // to check if the point equals the last one
+        while (geometry::equals(*it, *result))
+        {
+            circular_advance_one(result);
+        }
+        return result;
+    }
+
+    Ring const& m_ring;
+    iterator_type m_iterator_at_i;
+    iterator_type m_iterator_at_j;
+    mutable iterator_type m_iterator_at_k;
+    mutable bool m_point_retrieved;
 };
-#endif
 
 template
 <
     typename Pieces,
     typename Rings,
     typename Turns,
-    typename IntersectionStrategy,
+    typename Strategy,
     typename RobustPolicy
 >
 class piece_turn_visitor
@@ -76,7 +125,7 @@ class piece_turn_visitor
     Pieces const& m_pieces;
     Rings const& m_rings;
     Turns& m_turns;
-    IntersectionStrategy const& m_intersection_strategy;
+    Strategy const& m_strategy;
     RobustPolicy const& m_robust_policy;
 
     template <typename Piece>
@@ -100,30 +149,6 @@ class piece_turn_visitor
         }
 
         return ! m_rings[piece1.first_seg_id.multi_index].has_concave;
-    }
-
-    template <typename Range, typename Iterator>
-    inline void move_to_next_point(Range const& range, Iterator& next) const
-    {
-        ++next;
-        if (next == boost::end(range))
-        {
-            next = boost::begin(range) + 1;
-        }
-    }
-
-    template <typename Range, typename Iterator>
-    inline Iterator next_point(Range const& range, Iterator it) const
-    {
-        Iterator result = it;
-        move_to_next_point(range, result);
-        // TODO: we could use either piece-boundaries, or comparison with
-        // robust points, to check if the point equals the last one
-        while(geometry::equals(*it, *result))
-        {
-            move_to_next_point(range, result);
-        }
-        return result;
     }
 
     template <std::size_t Dimension, typename Iterator, typename Box>
@@ -230,36 +255,25 @@ class piece_turn_visitor
             the_model.operations[1].seg_id = piece2.first_seg_id;
             the_model.operations[1].seg_id.segment_index = index2; // override
 
-            iterator next1 = next_point(ring1, it1);
+            unique_sub_range_from_piece<ring_type> unique_sub_range1(ring1, prev1, it1);
 
             iterator it2 = it2_first;
             for (iterator prev2 = it2++;
                     it2 != it2_beyond;
                     prev2 = it2++, the_model.operations[1].seg_id.segment_index++)
             {
-                iterator next2 = next_point(ring2, it2);
+                unique_sub_range_from_piece<ring_type> unique_sub_range2(ring2, prev2, it2);
 
-                // TODO: internally get_turn_info calculates robust points.
-                // But they are already calculated.
-                // We should be able to use them.
-                // this means passing them to this visitor,
-                // and iterating in sync with them...
                 typedef detail::overlay::get_turn_info
                     <
-#if defined(BOOST_GEOMETRY_BUFFER_USE_SIDE_OF_INTERSECTION)
-                        buffer_assign_turn
-#else
-                        detail::overlay::assign_null_policy
-#endif
+                        detail::overlay::assign_policy_only_start_turns
                     > turn_policy;
 
-                turn_policy::apply(*prev1, *it1, *next1,
-                                    *prev2, *it2, *next2,
-                                    false, false, false, false,
-                                    the_model,
-                                    m_intersection_strategy,
-                                    m_robust_policy,
-                                    std::back_inserter(m_turns));
+                turn_policy::apply(unique_sub_range1, unique_sub_range2,
+                                   the_model,
+                                   m_strategy,
+                                   m_robust_policy,
+                                   std::back_inserter(m_turns));
             }
         }
     }
@@ -269,12 +283,12 @@ public:
     piece_turn_visitor(Pieces const& pieces,
             Rings const& ring_collection,
             Turns& turns,
-            IntersectionStrategy const& intersection_strategy,
+            Strategy const& strategy,
             RobustPolicy const& robust_policy)
         : m_pieces(pieces)
         , m_rings(ring_collection)
         , m_turns(turns)
-        , m_intersection_strategy(intersection_strategy)
+        , m_strategy(strategy)
         , m_robust_policy(robust_policy)
     {}
 
@@ -292,7 +306,8 @@ public:
           || is_adjacent(piece1, piece2)
           || is_on_same_convex_ring(piece1, piece2)
           || detail::disjoint::disjoint_box_box(section1.bounding_box,
-                                                section2.bounding_box) )
+                                                section2.bounding_box,
+                                                m_strategy) )
         {
             return true;
         }

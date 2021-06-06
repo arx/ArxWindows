@@ -1,11 +1,6 @@
 #ifndef BOOST_NUMERIC_SAFE_INTEGER_LITERAL_HPP
 #define BOOST_NUMERIC_SAFE_INTEGER_LITERAL_HPP
 
-// MS compatible compilers support #pragma once
-#if defined(_MSC_VER) && (_MSC_VER >= 1020)
-# pragma once
-#endif
-
 //  Copyright (c) 2012 Robert Ramey
 //
 // Distributed under the Boost Software License, Version 1.0. (See
@@ -109,7 +104,21 @@ public:
         >::type = 0
     >
     constexpr operator R () const {
-        return N;
+        // if static values don't overlap, the program can never function
+        #if 1
+        constexpr const interval<R> r_interval;
+        static_assert(
+            ! r_interval.excludes(N),
+            "safe type cannot be constructed with this type"
+        );
+        #endif
+
+        return validate_detail<
+            R,
+            std::numeric_limits<R>::min(),
+            std::numeric_limits<R>::max(),
+            E
+        >::return_value(*this);
     }
 
     // non mutating unary operators
@@ -207,7 +216,7 @@ template<
         int
     >::type = 0
 >
-constexpr auto make_safe_literal_impl() {
+constexpr auto inline make_safe_literal_impl() {
     return boost::safe_numerics::safe_unsigned_literal<N, P, E>();
 }
 

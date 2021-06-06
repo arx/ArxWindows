@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2018 Vinnie Falco (vinnie dot falco at gmail dot com)
+// Copyright (c) 2016-2019 Vinnie Falco (vinnie dot falco at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -11,6 +11,7 @@
 #define BOOST_BEAST_CORE_DETAIL_BUFFER_HPP
 
 #include <boost/beast/core/error.hpp>
+#include <boost/asio/buffer.hpp>
 #include <boost/optional.hpp>
 #include <stdexcept>
 
@@ -39,7 +40,7 @@ dynamic_buffer_prepare_noexcept(
     boost::optional<typename
         DynamicBuffer::mutable_buffers_type> result;
     result.emplace(buffer.prepare(size));
-    ec.assign(0, ec.category());
+    ec = {};
     return result;
 }
 
@@ -61,7 +62,7 @@ dynamic_buffer_prepare(
         boost::optional<typename
             DynamicBuffer::mutable_buffers_type> result;
         result.emplace(buffer.prepare(size));
-        ec.assign(0, ec.category());
+        ec = {};
         return result;
     }
     catch(std::length_error const&)

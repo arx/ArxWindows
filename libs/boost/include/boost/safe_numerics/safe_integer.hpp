@@ -1,11 +1,6 @@
 #ifndef BOOST_NUMERIC_SAFE_INTEGER_HPP
 #define BOOST_NUMERIC_SAFE_INTEGER_HPP
 
-// MS compatible compilers support #pragma once
-#if defined(_MSC_VER) && (_MSC_VER >= 1020)
-# pragma once
-#endif
-
 //  Copyright (c) 2012 Robert Ramey
 //
 // Distributed under the Boost Software License, Version 1.0. (See
@@ -15,6 +10,7 @@
 // not actually used here - but needed for integer arithmetic
 // so this is a good place to include it
 #include "checked_integer.hpp"
+#include "checked_result_operations.hpp"
 
 #include "safe_base.hpp"
 #include "safe_base_operations.hpp"

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2016-2017 Vinnie Falco (vinnie dot falco at gmail dot com)
+// Copyright (c) 2016-2019 Vinnie Falco (vinnie dot falco at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -11,8 +11,9 @@
 #define BOOST_BEAST_HTTP_BASIC_DYNAMIC_BODY_HPP
 
 #include <boost/beast/core/detail/config.hpp>
-#include <boost/beast/core/type_traits.hpp>
+#include <boost/beast/core/buffer_traits.hpp>
 #include <boost/beast/core/detail/buffer.hpp>
+#include <boost/beast/core/detail/clamp.hpp>
 #include <boost/beast/http/error.hpp>
 #include <boost/beast/http/message.hpp>
 #include <boost/optional.hpp>
@@ -24,9 +25,9 @@ namespace boost {
 namespace beast {
 namespace http {
 
-/** A @b Body using a @b DynamicBuffer
+/** A <em>Body</em> using a <em>DynamicBuffer</em>
 
-    This body uses a @b DynamicBuffer as a memory-based container
+    This body uses a <em>DynamicBuffer</em> as a memory-based container
     for holding message payloads. Messages using this body type
     may be serialized and parsed.
 */
@@ -34,8 +35,8 @@ template<class DynamicBuffer>
 struct basic_dynamic_body
 {
     static_assert(
-        boost::asio::is_dynamic_buffer<DynamicBuffer>::value,
-        "DynamicBuffer requirements not met");
+        net::is_dynamic_buffer<DynamicBuffer>::value,
+        "DynamicBuffer type requirements not met");
 
     /** The type of container used for the body
 
@@ -59,10 +60,10 @@ struct basic_dynamic_body
 
     /** The algorithm for parsing the body
 
-        Meets the requirements of @b BodyReader.
+        Meets the requirements of <em>BodyReader</em>.
     */
 #if BOOST_BEAST_DOXYGEN
-    using reader = implementation_defined;
+    using reader = __implementation_defined__;
 #else
     class reader
     {
@@ -80,7 +81,7 @@ struct basic_dynamic_body
         init(boost::optional<
             std::uint64_t> const&, error_code& ec)
         {
-            ec.assign(0, ec.category());
+            ec = {};
         }
 
         template<class ConstBufferSequence>
@@ -88,10 +89,8 @@ struct basic_dynamic_body
         put(ConstBufferSequence const& buffers,
             error_code& ec)
         {
-            using boost::asio::buffer_copy;
-            using boost::asio::buffer_size;
-            auto const n = buffer_size(buffers);
-            if(body_.size() > body_.max_size() - n)
+            auto const n = buffer_bytes(buffers);
+            if(beast::detail::sum_exceeds(body_.size(), n, body_.max_size()))
             {
                 ec = error::buffer_overflow;
                 return 0;
@@ -104,7 +103,7 @@ struct basic_dynamic_body
             if(ec)
                 return 0;
             auto const bytes_transferred =
-                buffer_copy(*mb, buffers);
+                net::buffer_copy(*mb, buffers);
             body_.commit(bytes_transferred);
             return bytes_transferred;
         }
@@ -112,17 +111,17 @@ struct basic_dynamic_body
         void
         finish(error_code& ec)
         {
-            ec.assign(0, ec.category());
+            ec = {};
         }
     };
 #endif
 
     /** The algorithm for serializing the body
 
-        Meets the requirements of @b BodyWriter.
+        Meets the requirements of <em>BodyWriter</em>.
     */
 #if BOOST_BEAST_DOXYGEN
-    using writer = implementation_defined;
+    using writer = __implementation_defined__;
 #else
     class writer
     {
@@ -142,13 +141,13 @@ struct basic_dynamic_body
         void
         init(error_code& ec)
         {
-            ec.assign(0, ec.category());
+            ec = {};
         }
 
         boost::optional<std::pair<const_buffers_type, bool>>
         get(error_code& ec)
         {
-            ec.assign(0, ec.category());
+            ec = {};
             return {{body_.data(), false}};
         }
     };

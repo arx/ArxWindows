@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2016-2017 Vinnie Falco (vinnie dot falco at gmail dot com)
+// Copyright (c) 2016-2019 Vinnie Falco (vinnie dot falco at gmail dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -10,12 +10,13 @@
 #ifndef BOOST_BEAST_HTTP_IMPL_FIELD_IPP
 #define BOOST_BEAST_HTTP_IMPL_FIELD_IPP
 
-#include <boost/beast/core/string.hpp>
+#include <boost/beast/http/field.hpp>
+#include <boost/assert.hpp>
 #include <algorithm>
 #include <array>
-#include <unordered_map>
-#include <vector>
-#include <boost/assert.hpp>
+#include <cstring>
+#include <ostream>
+
 
 namespace boost {
 namespace beast {
@@ -25,61 +26,89 @@ namespace detail {
 
 struct field_table
 {
+    static
+    std::uint32_t
+    get_chars(
+        unsigned char const* p) noexcept
+    {
+        // VFALCO memcpy is endian-dependent
+        //std::memcpy(&v, p, 4);
+        // Compiler should be smart enough to
+        // optimize this down to one instruction.
+        return
+             p[0] |
+            (p[1] <<  8) |
+            (p[2] << 16) |
+            (p[3] << 24);
+    }
+
     using array_type =
-        std::array<string_view, 353>;
+        std::array<string_view, 357>;
 
-    struct hash
+    // Strings are converted to lowercase
+    static
+    std::uint32_t
+    digest(string_view s)
     {
-        std::size_t
-        operator()(string_view s) const
+        std::uint32_t r = 0;
+        std::size_t n = s.size();
+        auto p = reinterpret_cast<
+            unsigned char const*>(s.data());
+        // consume N characters at a time
+        // VFALCO Can we do 8 on 64-bit systems?
+        while(n >= 4)
         {
-            auto const n = s.size();
-            return
-                beast::detail::ascii_tolower(s[0]) *
-                beast::detail::ascii_tolower(s[n/2]) ^
-                beast::detail::ascii_tolower(s[n-1]);   // hist[] = 331, 10, max_load_factor = 0.15f
+            auto const v = get_chars(p);
+            r = (r * 5 + (
+                v | 0x20202020 )); // convert to lower
+            p += 4;
+            n -= 4;
         }
-    };
+        // handle remaining characters
+        while( n > 0 )
+        {
+            r = r * 5 + ( *p | 0x20 );
+            ++p;
+            --n;
+        }
+        return r;
+    }
 
-    struct iequal
+    // This comparison is case-insensitive, and the
+    // strings must contain only valid http field characters.
+    static
+    bool
+    equals(string_view lhs, string_view rhs)
     {
-        // assumes inputs have equal length
-        bool
-        operator()(
-            string_view lhs,
-            string_view rhs) const
+        using Int = std::uint32_t; // VFALCO std::size_t?
+        auto n = lhs.size();
+        if(n != rhs.size())
+            return false;
+        auto p1 = reinterpret_cast<
+            unsigned char const*>(lhs.data());
+        auto p2 = reinterpret_cast<
+            unsigned char const*>(rhs.data());
+        auto constexpr S = sizeof(Int);
+        auto constexpr Mask = static_cast<Int>(
+            0xDFDFDFDFDFDFDFDF & ~Int{0});
+        for(; n >= S; p1 += S, p2 += S, n -= S)
         {
-            auto p1 = lhs.data();
-            auto p2 = rhs.data();
-            auto pend = p1 + lhs.size();
-            char a, b;
-            while(p1 < pend)
-            {
-                a = *p1++;
-                b = *p2++;
-                if(a != b)
-                    goto slow;
-            }
-            return true;
-
-            while(p1 < pend)
-            {
-            slow:
-                if( beast::detail::ascii_tolower(a) !=
-                    beast::detail::ascii_tolower(b))
-                    return false;
-                a = *p1++;
-                b = *p2++;
-            }
-            return true;
+            Int const v1 = get_chars(p1);
+            Int const v2 = get_chars(p2);
+            if((v1 ^ v2) & Mask)
+                return false;
         }
-    };
-
-    using map_type = std::unordered_map<
-        string_view, field, hash, iequal>;
+        for(; n; ++p1, ++p2, --n)
+            if(( *p1 ^ *p2) & 0xDF)
+                return false;
+        return true;
+    }
 
     array_type by_name_;
-    std::vector<map_type> by_size_;
+
+    enum { N = 5155 };
+    unsigned char map_[ N ][ 2 ] = {};
+
 /*
     From:
     
@@ -87,6 +116,7 @@ struct field_table
 */
     field_table()
         : by_name_({{
+// string constants
             "<unknown-field>",
             "A-IM",
             "Accept",
@@ -364,6 +394,10 @@ struct field_table
             "Safe",
             "Schedule-Reply",
             "Schedule-Tag",
+            "Sec-Fetch-Dest",
+            "Sec-Fetch-Mode",
+            "Sec-Fetch-Site",
+            "Sec-Fetch-User",
             "Sec-WebSocket-Accept",
             "Sec-WebSocket-Extensions",
             "Sec-WebSocket-Key",
@@ -442,58 +476,43 @@ struct field_table
             "Xref"
         }})
     {
-        // find the longest field length
-        std::size_t high = 0;
-        for(auto const& s : by_name_)
-            if(high < s.size())
-                high = s.size();
-        // build by_size map
-        // skip field::unknown
-        by_size_.resize(high + 1);
-        for(auto& map : by_size_)
-            map.max_load_factor(.15f);
-        for(std::size_t i = 1;
-            i < by_name_.size(); ++i)
+        for(std::size_t i = 1, n = 256; i < n; ++i)
         {
-            auto const& s = by_name_[i];
-            by_size_[s.size()].emplace(
-                s, static_cast<field>(i));
+            auto sv = by_name_[ i ];
+            auto h = digest(sv);
+            auto j = h % N;
+            BOOST_ASSERT(map_[j][0] == 0);
+            map_[j][0] = static_cast<unsigned char>(i);
         }
 
-#if 0
-        // This snippet calculates the performance
-        // of the hash function and map settings
+        for(std::size_t i = 256, n = by_name_.size(); i < n; ++i)
         {
-            std::vector<std::size_t> hist;
-            for(auto const& map : by_size_)
-            {
-                for(std::size_t i = 0; i < map.bucket_count(); ++i)
-                {
-                    auto const n = map.bucket_size(i);
-                    if(n > 0)
-                    {
-                        if(hist.size() < n)
-                            hist.resize(n);
-                        ++hist[n-1];
-                    }
-                }
-            }
+            auto sv = by_name_[i];
+            auto h = digest(sv);
+            auto j = h % N;
+            BOOST_ASSERT(map_[j][1] == 0);
+            map_[j][1] = static_cast<unsigned char>(i - 255);
         }
-#endif
     }
 
     field
     string_to_field(string_view s) const
     {
-        if(s.size() >= by_size_.size())
+        auto h = digest(s);
+        auto j = h % N;
+        int i = map_[j][0];
+        string_view s2 = by_name_[i];
+        if(i != 0 && equals(s, s2))
+            return static_cast<field>(i);
+        i = map_[j][1];
+        if(i == 0)
             return field::unknown;
-        auto const& map = by_size_[s.size()];
-        if(map.empty())
-            return field::unknown;
-        auto it = map.find(s);
-        if(it == map.end())
-            return field::unknown;
-        return it->second;
+        i += 255;
+        s2 = by_name_[i];
+
+        if(equals(s, s2))
+            return static_cast<field>(i);
+        return field::unknown;
     }
 
     //
@@ -522,7 +541,7 @@ struct field_table
     }
 };
 
-inline
+BOOST_BEAST_DECL
 field_table const&
 get_field_table()
 {
@@ -530,7 +549,7 @@ get_field_table()
     return tab;
 }
 
-template<class = void>
+BOOST_BEAST_DECL
 string_view
 to_string(field f)
 {
@@ -541,18 +560,22 @@ to_string(field f)
 
 } // detail
 
-inline
 string_view
 to_string(field f)
 {
     return detail::to_string(f);
 }
 
-inline
 field
 string_to_field(string_view s)
 {
     return detail::get_field_table().string_to_field(s);
+}
+
+std::ostream&
+operator<<(std::ostream& os, field f)
+{
+    return os << to_string(f);
 }
 
 } // http

@@ -14,9 +14,9 @@
 
 #include <boost/gil/bit_aligned_pixel_reference.hpp>
 #include <boost/gil/channel.hpp>
+#include <boost/gil/detail/mp11.hpp>
 
-#include <boost/mpl/at.hpp>
-#include <boost/utility/enable_if.hpp>
+#include <boost/utility/enable_if.hpp> // boost::lazy_enable_if
 
 namespace boost{ namespace gil {
 
@@ -26,10 +26,12 @@ namespace boost{ namespace gil {
 template <typename B, typename C, typename L, bool M>
 struct gen_chan_ref
 {
-    typedef packed_dynamic_channel_reference< B
-                                            , mpl::at_c< C, 0 >::type::value
-                                            , M
-                                            > type;
+    using type = packed_dynamic_channel_reference
+        <
+            B,
+            mp11::mp_at_c<C, 0>::value,
+            M
+        >;
 };
 
 //! This implementation works for bit_algined_pixel_reference
@@ -53,28 +55,30 @@ struct channel_type<const bit_aligned_pixel_reference<B,C,L,M> >
 template <typename B, typename C, typename L>
 struct gen_chan_ref_p
 {
-    typedef packed_dynamic_channel_reference< B
-                                            , get_num_bits< typename mpl::at_c<C,0>::type>::value
-                                            , true
-                                            > type;
+    using type = packed_dynamic_channel_reference
+        <
+            B,
+            get_num_bits<mp11::mp_at_c<C, 0>>::value,
+            true
+        >;
 };
 
 // packed_pixel
 template < typename BitField
-         , typename ChannelRefVec
+         , typename ChannelRefs
          , typename Layout
          >
 struct channel_type< packed_pixel< BitField
-                                 , ChannelRefVec
+                                 , ChannelRefs
                                  , Layout
                                  >
                    > : lazy_enable_if< is_homogeneous< packed_pixel< BitField
-                                                                   , ChannelRefVec
+                                                                   , ChannelRefs
                                                                    , Layout
                                                                    >
                                                      >
                                      , gen_chan_ref_p< BitField
-                                                     , ChannelRefVec
+                                                     , ChannelRefs
                                                      , Layout
                                                      >
                                      > {};
@@ -89,7 +93,7 @@ struct channel_type< const packed_pixel< B, C, L > >
 template<>
 struct channel_type< any_image_pixel_t >
 {
-    typedef any_image_channel_t type;
+    using type = any_image_channel_t;
 };
 
 } // namespace gil

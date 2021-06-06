@@ -8,14 +8,15 @@
 #ifndef BOOST_GIL_EXTENSION_IO_BMP_DETAIL_SUPPORTED_TYPES_HPP
 #define BOOST_GIL_EXTENSION_IO_BMP_DETAIL_SUPPORTED_TYPES_HPP
 
+#include <boost/gil/extension/io/bmp/tags.hpp>
+
 #include <boost/gil/bit_aligned_pixel_reference.hpp>
 #include <boost/gil/channel.hpp>
 #include <boost/gil/color_base.hpp>
 #include <boost/gil/packed_pixel.hpp>
 #include <boost/gil/io/base.hpp>
 
-#include <boost/mpl/not.hpp>
-#include <boost/type_traits/is_same.hpp>
+#include <type_traits>
 
 namespace boost { namespace gil { namespace detail {
 
@@ -104,31 +105,39 @@ struct bmp_write_support<uint8_t
 
 } // namespace detail
 
-
-template< typename Pixel >
-struct is_read_supported< Pixel
-                        , bmp_tag
-                        >
-    : mpl::bool_< detail::bmp_read_support< typename channel_type< Pixel >::type
-                                          , typename color_space_type< Pixel >::type
-                                          >::is_supported
-                >
+template<typename Pixel>
+struct is_read_supported<Pixel, bmp_tag>
+    : std::integral_constant
+    <
+        bool,
+        detail::bmp_read_support
+        <
+            typename channel_type<Pixel>::type,
+            typename color_space_type<Pixel>::type
+        >::is_supported
+    >
 {
-    typedef detail::bmp_read_support< typename channel_type< Pixel >::type
-                                    , typename color_space_type< Pixel >::type
-                                    > parent_t;
+    using parent_t = detail::bmp_read_support
+        <
+            typename channel_type<Pixel>::type,
+            typename color_space_type<Pixel>::type
+        >;
 
     static const typename bmp_bits_per_pixel::type bpp = parent_t::bpp;
 };
 
-template< typename Pixel >
-struct is_write_supported< Pixel
-                         , bmp_tag
-                         >
-    : mpl::bool_< detail::bmp_write_support< typename channel_type< Pixel >::type
-                                           , typename color_space_type< Pixel >::type
-                                           >::is_supported
-                > {};
+template<typename Pixel>
+struct is_write_supported<Pixel, bmp_tag>
+    : std::integral_constant
+    <
+        bool,
+        detail::bmp_write_support
+        <
+            typename channel_type<Pixel>::type,
+            typename color_space_type<Pixel>::type
+        >::is_supported
+    >
+{};
 
 } // namespace gil
 } // namespace boost

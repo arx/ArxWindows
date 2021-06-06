@@ -10,9 +10,9 @@
 
 #include <boost/gil/extension/toolbox/color_spaces/xyz.hpp>
 
+#include <boost/gil/color_convert.hpp>
 #include <boost/gil.hpp> // FIXME: Include what you use, not everything, even in extensions!
-
-#include <boost/mpl/vector.hpp>
+#include <boost/gil/detail/mp11.hpp>
 
 namespace boost{ namespace gil {
 
@@ -21,24 +21,26 @@ namespace boost{ namespace gil {
 namespace lab_color_space
 {
 /// \brief Luminance
-struct luminance_t {};    
+struct luminance_t {};
 /// \brief a Color Component
 struct a_color_opponent_t {};
 /// \brief b Color Component
-struct b_color_opponent_t {}; 
+struct b_color_opponent_t {};
 }
 /// \}
 
 /// \ingroup ColorSpaceModel
-typedef mpl::vector3< lab_color_space::luminance_t
-                    , lab_color_space::a_color_opponent_t
-                    , lab_color_space::b_color_opponent_t
-                    > lab_t;
+using lab_t = mp11::mp_list
+<
+    lab_color_space::luminance_t,
+    lab_color_space::a_color_opponent_t,
+    lab_color_space::b_color_opponent_t
+>;
 
 /// \ingroup LayoutModel
-typedef layout<lab_t> lab_layout_t;
+using lab_layout_t = layout<lab_t>;
 
-GIL_DEFINE_ALL_TYPEDEFS(32f, float32_t, lab)
+BOOST_GIL_DEFINE_ALL_TYPEDEFS(32f, float32_t, lab)
 
 /// \ingroup ColorConvert
 /// \brief LAB to XYZ

@@ -1,6 +1,6 @@
 // Boost.Geometry
 
-// Copyright (c) 2017, Oracle and/or its affiliates.
+// Copyright (c) 2017-2020, Oracle and/or its affiliates.
 // Contributed and/or modified by Vissarion Fysikopoulos, on behalf of Oracle
 // Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 
@@ -12,16 +12,14 @@
 #define BOOST_GEOMETRY_STRATEGIES_DISJOINT_HPP
 
 
-#include <boost/mpl/assert.hpp>
-#include <boost/type_traits/is_same.hpp>
-
 #include <boost/geometry/core/cs.hpp>
 #include <boost/geometry/core/point_type.hpp>
 #include <boost/geometry/core/topological_dimension.hpp>
 
 #include <boost/geometry/strategies/covered_by.hpp>
 #include <boost/geometry/strategies/default_strategy.hpp>
-#include <boost/geometry/strategies/relate.hpp>
+
+#include <boost/geometry/strategy/relate.hpp>
 
 
 namespace boost { namespace geometry { namespace strategy { namespace disjoint
@@ -76,13 +74,6 @@ struct default_strategy<Box, MultiPoint, box_tag, multi_point_tag, 2, 0>
             Box
         >
 {};
-
-template <typename Box1, typename Box2>
-struct default_strategy<Box1, Box2, box_tag, box_tag, 2, 2>
-{
-    // dummy strategy which will be ignored
-    typedef geometry::default_strategy type;
-};
 
 } // namespace services
 #endif // DOXYGEN_NO_STRATEGY_SPECIALIZATIONS

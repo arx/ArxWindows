@@ -1,6 +1,6 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2015-2018, Oracle and/or its affiliates.
+// Copyright (c) 2015-2020, Oracle and/or its affiliates.
 
 // Contributed and/or modified by Vissarion Fysikopoulos, on behalf of Oracle
 // Contributed and/or modified by Menelaos Karavelas, on behalf of Oracle
@@ -13,12 +13,19 @@
 #ifndef BOOST_GEOMETRY_ALGORITHMS_DETAIL_ENVELOPE_RANGE_OF_BOXES_HPP
 #define BOOST_GEOMETRY_ALGORITHMS_DETAIL_ENVELOPE_RANGE_OF_BOXES_HPP
 
-#include <cstddef>
-
 #include <algorithm>
+#include <cstddef>
+#include <type_traits>
 #include <vector>
 
-#include <boost/range.hpp>
+#include <boost/range/begin.hpp>
+#include <boost/range/empty.hpp>
+#include <boost/range/end.hpp>
+#include <boost/range/value_type.hpp>
+
+#include <boost/geometry/algorithms/detail/convert_point_to_point.hpp>
+#include <boost/geometry/algorithms/detail/max_interval_gap.hpp>
+#include <boost/geometry/algorithms/detail/expand/indexed.hpp>
 
 #include <boost/geometry/core/access.hpp>
 #include <boost/geometry/core/assert.hpp>
@@ -26,11 +33,10 @@
 #include <boost/geometry/core/coordinate_type.hpp>
 
 #include <boost/geometry/util/math.hpp>
+#include <boost/geometry/util/normalize_spheroidal_coordinates.hpp>
 #include <boost/geometry/util/range.hpp>
 
-#include <boost/geometry/algorithms/detail/convert_point_to_point.hpp>
-#include <boost/geometry/algorithms/detail/max_interval_gap.hpp>
-#include <boost/geometry/algorithms/detail/expand/indexed.hpp>
+#include <boost/geometry/views/detail/indexed_point_view.hpp>
 
 
 namespace boost { namespace geometry
@@ -151,10 +157,8 @@ struct envelope_range_of_longitudes
 template <std::size_t Dimension, std::size_t DimensionCount>
 struct envelope_range_of_boxes_by_expansion
 {
-    template <typename RangeOfBoxes, typename Box, typename Strategy>
-    static inline void apply(RangeOfBoxes const& range_of_boxes,
-                             Box& mbr,
-                             Strategy const& strategy)
+    template <typename RangeOfBoxes, typename Box>
+    static inline void apply(RangeOfBoxes const& range_of_boxes, Box& mbr)
     {
         typedef typename boost::range_value<RangeOfBoxes>::type box_type;
 
@@ -198,14 +202,14 @@ struct envelope_range_of_boxes_by_expansion
                     min_corner,
                     Dimension,
                     DimensionCount
-                >::apply(mbr, *it, strategy);
+                >::apply(mbr, *it);
 
             detail::expand::indexed_loop
                 <
                     max_corner,
                     Dimension,
                     DimensionCount
-                >::apply(mbr, *it, strategy);
+                >::apply(mbr, *it);
         }
     }
 
@@ -225,22 +229,20 @@ struct envelope_range_of_boxes
         }
     };
 
-    template <typename RangeOfBoxes, typename Box, typename Strategy>
-    static inline void apply(RangeOfBoxes const& range_of_boxes,
-                             Box& mbr,
-                             Strategy const& strategy)
+    template <typename RangeOfBoxes, typename Box>
+    static inline void apply(RangeOfBoxes const& range_of_boxes, Box& mbr)
     {
         // boxes in the range are assumed to be normalized already
 
         typedef typename boost::range_value<RangeOfBoxes>::type box_type;
         typedef typename coordinate_type<box_type>::type coordinate_type;
-        typedef typename coordinate_system<box_type>::type::units units_type;
+        typedef typename detail::cs_angular_units<box_type>::type units_type;
         typedef typename boost::range_iterator
             <
                 RangeOfBoxes const
             >::type iterator_type;
 
-        static const bool is_equatorial = ! boost::is_same
+        static const bool is_equatorial = ! std::is_same
                                             <
                                                 typename cs_tag<box_type>::type,
                                                 spherical_polar_tag
@@ -326,7 +328,7 @@ struct envelope_range_of_boxes
         envelope_range_of_boxes_by_expansion
             <
                 2, dimension<Box>::value
-            >::apply(range_of_boxes, mbr, strategy);
+            >::apply(range_of_boxes, mbr);
     }
 };
 

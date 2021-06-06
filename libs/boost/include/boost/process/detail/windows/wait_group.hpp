@@ -17,7 +17,7 @@ namespace boost { namespace process { namespace detail { namespace windows {
 struct group_handle;
 
 
-inline bool wait_impl(const group_handle & p, std::error_code & ec, int wait_time)
+inline bool wait_impl(const group_handle & p, std::error_code & ec, std::chrono::system_clock::rep wait_time)
 {
     ::boost::winapi::DWORD_ completion_code;
     ::boost::winapi::ULONG_PTR_ completion_key;
@@ -27,7 +27,7 @@ inline bool wait_impl(const group_handle & p, std::error_code & ec, int wait_tim
 
     while (workaround::get_queued_completion_status(
                                        p._io_port, &completion_code,
-                                       &completion_key, &overlapped, wait_time))
+                                       &completion_key, &overlapped, static_cast<::boost::winapi::DWORD_>(wait_time)))
     {
         if (reinterpret_cast<::boost::winapi::HANDLE_>(completion_key) == p._job_object &&
              completion_code == workaround::JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO_)
@@ -48,11 +48,11 @@ inline bool wait_impl(const group_handle & p, std::error_code & ec, int wait_tim
                 return false; //correct, nothing left.
         }
         //reduce the remaining wait time -> in case interrupted by something else
-        if (wait_time != ::boost::winapi::infinite)
+        if (wait_time != static_cast<int>(::boost::winapi::infinite))
         {
             auto now = std::chrono::system_clock::now();
             auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time);
-            wait_time -= diff.count();
+            wait_time -= static_cast<std::chrono::system_clock::rep>(diff.count());
             start_time = now;
             if (wait_time <= 0)
                 return true; //timeout with other source

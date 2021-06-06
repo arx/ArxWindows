@@ -9,8 +9,9 @@
 #define BOOST_GIL_EXTENSION_IO_TIFF_DETAIL_WRITER_BACKEND_HPP
 
 #include <boost/gil/extension/io/tiff/tags.hpp>
+#include <boost/gil/extension/io/tiff/detail/device.hpp>
 
-#include <boost/mpl/contains.hpp>
+#include <boost/gil/detail/mp11.hpp>
 
 namespace boost { namespace gil {
 
@@ -29,7 +30,7 @@ struct writer_backend< Device
 {
 public:
 
-    typedef tiff_tag format_tag_t;
+    using format_tag_t = tiff_tag;
 
 public:
 
@@ -45,11 +46,11 @@ protected:
     template< typename View >
     void write_header( const View& view )
     {
-        typedef typename View::value_type pixel_t;
+        using pixel_t = typename View::value_type;
 
         // get the type of the first channel (heterogeneous pixels might be broken for now!)
-        typedef typename channel_traits< typename element_type< pixel_t >::type >::value_type channel_t;
-				typedef typename color_space_type< View >::type color_space_t;
+        using channel_t = typename channel_traits<typename element_type<pixel_t>::type>::value_type;
+				using color_space_t = typename color_space_type<View>::type;
 
         if(! this->_info._photometric_interpretation_user_defined )
         {
@@ -77,10 +78,12 @@ protected:
         tiff_samples_per_pixel::type samples_per_pixel = num_channels< pixel_t >::value;
         this->_io_dev.template set_property<tiff_samples_per_pixel>( samples_per_pixel );
 
-        if (mpl:: contains <color_space_t, alpha_t>:: value) {
+        if /*constexpr*/ (mp11::mp_contains<color_space_t, alpha_t>::value)
+        {
           std:: vector <uint16_t> extra_samples {EXTRASAMPLE_ASSOCALPHA};
           this->_io_dev.template set_property<tiff_extra_samples>( extra_samples );
         }
+
         // write bits per sample
         // @todo: Settings this value usually requires to write for each sample the bit
         // value seperately in case they are different, like rgb556.
@@ -88,7 +91,7 @@ protected:
         this->_io_dev.template set_property<tiff_bits_per_sample>( bits_per_sample );
 
         // write sample format
-        tiff_sample_format::type sampl_format = detail::sample_format< channel_t >::type::value;
+        tiff_sample_format::type sampl_format = detail::sample_format< channel_t >::value;
         this->_io_dev.template set_property<tiff_sample_format>( sampl_format );
 
         // write photometric format

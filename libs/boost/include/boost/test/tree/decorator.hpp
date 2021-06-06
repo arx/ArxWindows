@@ -59,14 +59,19 @@ public:
 
     void                    reset();
 
+    void                    stack();
+
     std::vector<base_ptr>   get_lazy_decorators() const;
 
-    // singleton pattern
-    BOOST_TEST_SINGLETON_CONS( collector_t )
+    // singleton pattern without ctor
+    BOOST_TEST_SINGLETON_CONS_NO_CTOR( collector_t )
 
-    private:
+private:
+    // Class invariant: minimal size is 1.
+    collector_t() : m_tu_decorators_stack(1) {}
+
     // Data members
-    std::vector<base_ptr>   m_tu_decorators;
+    std::vector< std::vector<base_ptr> >   m_tu_decorators_stack;
 };
 
 
@@ -77,7 +82,7 @@ public:
 class BOOST_TEST_DECL base {
 public:
     // composition interface
-    collector_t&              operator*() const;
+    virtual collector_t&    operator*() const;
 
     // application interface
     virtual void            apply( test_unit& tu ) = 0;
@@ -90,6 +95,30 @@ protected:
 };
 
 // ************************************************************************** //
+// **************         decorator::stack_decorator           ************** //
+// ************************************************************************** //
+
+//!@ A decorator that creates a new stack in the collector
+//!
+//! This decorator may be used in places where the currently accumulated decorators
+//! in the collector should be applied to lower levels of the hierarchy rather
+//! than the current one. This is for instance for dataset test cases, where the
+//! macro does not let the user specify decorators for the underlying generated tests
+//! (but rather on the main generator function), applying the stack_decorator at the
+//! parent level lets us consume the decorator at the underlying test cases level.
+class BOOST_TEST_DECL stack_decorator : public decorator::base {
+public:
+    explicit                stack_decorator() {}
+
+    collector_t&    operator*() const BOOST_OVERRIDE;
+
+private:
+    // decorator::base interface
+    void            apply( test_unit& tu ) BOOST_OVERRIDE;
+    base_ptr        clone() const BOOST_OVERRIDE { return base_ptr(new stack_decorator()); }
+};
+
+// ************************************************************************** //
 // **************               decorator::label               ************** //
 // ************************************************************************** //
 
@@ -99,8 +128,8 @@ public:
 
 private:
     // decorator::base interface
-    virtual void            apply( test_unit& tu );
-    virtual base_ptr        clone() const { return base_ptr(new label( m_label )); }
+    void            apply( test_unit& tu ) BOOST_OVERRIDE;
+    base_ptr        clone() const BOOST_OVERRIDE { return base_ptr(new label( m_label )); }
 
     // Data members
     const_string            m_label;
@@ -116,8 +145,8 @@ public:
 
 private:
     // decorator::base interface
-    virtual void            apply( test_unit& tu );
-    virtual base_ptr        clone() const { return base_ptr(new expected_failures( m_exp_fail )); }
+    void            apply( test_unit& tu ) BOOST_OVERRIDE;
+    base_ptr        clone() const BOOST_OVERRIDE { return base_ptr(new expected_failures( m_exp_fail )); }
 
     // Data members
     counter_t               m_exp_fail;
@@ -133,8 +162,8 @@ public:
 
 private:
     // decorator::base interface
-    virtual void            apply( test_unit& tu );
-    virtual base_ptr        clone() const { return base_ptr(new timeout( m_timeout )); }
+    void            apply( test_unit& tu ) BOOST_OVERRIDE;
+    base_ptr        clone() const BOOST_OVERRIDE { return base_ptr(new timeout( m_timeout )); }
 
     // Data members
     unsigned                m_timeout;
@@ -150,8 +179,8 @@ public:
 
 private:
     // decorator::base interface
-    virtual void            apply( test_unit& tu );
-    virtual base_ptr        clone() const { return base_ptr(new description( m_description )); }
+    void            apply( test_unit& tu ) BOOST_OVERRIDE;
+    base_ptr        clone() const BOOST_OVERRIDE { return base_ptr(new description( m_description )); }
 
     // Data members
     const_string            m_description;
@@ -167,8 +196,8 @@ public:
 
 private:
     // decorator::base interface
-    virtual void            apply( test_unit& tu );
-    virtual base_ptr        clone() const { return base_ptr(new depends_on( m_dependency )); }
+    void            apply( test_unit& tu ) BOOST_OVERRIDE;
+    base_ptr        clone() const BOOST_OVERRIDE { return base_ptr(new depends_on( m_dependency )); }
 
     // Data members
     const_string            m_dependency;
@@ -187,8 +216,8 @@ template<bool condition>
 class enable_if : public enable_if_impl {
 private:
     // decorator::base interface
-    virtual void            apply( test_unit& tu )   { this->apply_impl( tu, condition ); }
-    virtual base_ptr        clone() const            { return base_ptr(new enable_if<condition>()); }
+    void            apply( test_unit& tu ) BOOST_OVERRIDE   { this->apply_impl( tu, condition ); }
+    base_ptr        clone() const BOOST_OVERRIDE            { return base_ptr(new enable_if<condition>()); }
 };
 
 typedef enable_if<true> enabled;
@@ -205,8 +234,8 @@ public:
 
 private:
     // decorator::base interface
-    virtual void            apply( test_unit& tu );
-    virtual base_ptr        clone() const { return base_ptr(new fixture_t( m_impl )); }
+    void            apply( test_unit& tu ) BOOST_OVERRIDE;
+    base_ptr        clone() const BOOST_OVERRIDE { return base_ptr(new fixture_t( m_impl )); }
 
     // Data members
     test_unit_fixture_ptr m_impl;
@@ -252,8 +281,8 @@ public:
 
 private:
     // decorator::base interface
-    virtual void            apply( test_unit& tu );
-    virtual base_ptr        clone() const { return base_ptr(new precondition( m_precondition )); }
+    void            apply( test_unit& tu ) BOOST_OVERRIDE;
+    base_ptr        clone() const BOOST_OVERRIDE { return base_ptr(new precondition( m_precondition )); }
 
     // Data members
     predicate_t             m_precondition;

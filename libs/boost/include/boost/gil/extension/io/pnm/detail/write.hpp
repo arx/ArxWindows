@@ -12,10 +12,14 @@
 #include <boost/gil/extension/io/pnm/detail/writer_backend.hpp>
 
 #include <boost/gil/io/base.hpp>
+#include <boost/gil/io/bit_operations.hpp>
 #include <boost/gil/io/device.hpp>
+#include <boost/gil/io/dynamic_io_new.hpp>
+#include <boost/gil/detail/mp11.hpp>
 
 #include <cstdlib>
 #include <string>
+#include <type_traits>
 
 namespace boost { namespace gil {
 
@@ -50,7 +54,7 @@ class writer< Device
                            >
 {
 private:
-    typedef writer_backend< Device, pnm_tag > backend_t;
+    using backend_t = writer_backend<Device, pnm_tag>;
 
 public:
 
@@ -65,7 +69,7 @@ public:
     template< typename View >
     void apply( const View& view )
     {
-        typedef typename get_pixel_type< View >::type pixel_t;
+        using pixel_t = typename get_pixel_type<View>::type;
 
         std::size_t width  = view.width();
         std::size_t height = view.height();
@@ -106,68 +110,57 @@ public:
 private:
 
     template< int Channels >
-    unsigned int get_type( mpl::true_  /* is_bit_aligned */ )
+    unsigned int get_type( std::true_type  /* is_bit_aligned */ )
     {
-        return boost::mpl::if_c< Channels == 1
-                               , pnm_image_type::mono_bin_t
-                               , pnm_image_type::color_bin_t
-                               >::type::value;
+        return mp11::mp_if_c
+            <
+                Channels == 1,
+                pnm_image_type::mono_bin_t,
+                pnm_image_type::color_bin_t
+            >::value;
     }
 
     template< int Channels >
-    unsigned int get_type( mpl::false_ /* is_bit_aligned */ )
+    unsigned int get_type( std::false_type /* is_bit_aligned */ )
     {
-        return boost::mpl::if_c< Channels == 1
-                               , pnm_image_type::gray_bin_t
-                               , pnm_image_type::color_bin_t
-                               >::type::value;
+        return mp11::mp_if_c
+            <
+                Channels == 1,
+                pnm_image_type::gray_bin_t,
+                pnm_image_type::color_bin_t
+            >::value;
     }
 
     template< typename View >
     void write_data( const View&   src
                    , std::size_t   pitch
-                   , const mpl::true_&    // bit_aligned
+                   , const std::true_type&    // bit_aligned
                    )
     {
-        BOOST_STATIC_ASSERT(( is_same< View
-                                     , typename gray1_image_t::view_t
-                                     >::value
-                           ));
+        static_assert(std::is_same<View, typename gray1_image_t::view_t>::value, "");
 
         byte_vector_t row( pitch / 8 );
 
-        typedef typename View::x_iterator x_it_t;
+        using x_it_t = typename View::x_iterator;
         x_it_t row_it = x_it_t( &( *row.begin() ));
 
-        detail::negate_bits< byte_vector_t
-                           , mpl::true_
-                           > neg;
-
-        detail::mirror_bits< byte_vector_t
-                           , mpl::true_
-                           > mirror;
-
-
-        for( typename View::y_coord_t y = 0; y < src.height(); ++y )
+        detail::negate_bits<byte_vector_t, std::true_type> negate;
+        detail::mirror_bits<byte_vector_t, std::true_type> mirror;
+        for (typename View::y_coord_t y = 0; y < src.height(); ++y)
         {
-            std::copy( src.row_begin( y )
-                     , src.row_end( y )
-                     , row_it
-                     );
+            std::copy(src.row_begin(y), src.row_end(y), row_it);
 
-            mirror( row );
-            neg   ( row );
+            mirror(row);
+            negate(row);
 
-            this->_io_dev.write( &row.front()
-                               , pitch / 8
-                               );
+            this->_io_dev.write(&row.front(), pitch / 8);
         }
     }
 
     template< typename View >
     void write_data( const View&   src
                    , std::size_t   pitch
-                   , const mpl::false_&    // bit_aligned
+                   , const std::false_type&    // bit_aligned
                    )
     {
         std::vector< pixel< typename channel_type< View >::type
@@ -175,8 +168,8 @@ private:
                           >
                    > buf( src.width() );
 
-        // typedef typename View::value_type pixel_t;
-        // typedef typename view_type_from_pixel< pixel_t >::type view_t;
+        // using pixel_t = typename View::value_type;
+        // using view_t = typename view_type_from_pixel< pixel_t >::type;
 
         //view_t row = interleaved_view( src.width()
         //                             , 1
@@ -221,9 +214,7 @@ class dynamic_image_writer< Device
                    , pnm_tag
                    >
 {
-    typedef writer< Device
-                  , pnm_tag
-                  > parent_t;
+    using parent_t = writer<Device, pnm_tag>;
 
 public:
 
@@ -235,8 +226,8 @@ public:
               )
     {}
 
-    template< typename Views >
-    void apply( const any_image_view< Views >& views )
+    template< typename ...Views >
+    void apply( const any_image_view< Views... >& views )
     {
         detail::dynamic_io_fnobj< detail::pnm_write_is_supported
                                 , parent_t

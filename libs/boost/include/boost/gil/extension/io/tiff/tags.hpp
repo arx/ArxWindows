@@ -10,9 +10,10 @@
 
 #include <boost/gil/extension/io/tiff/detail/log.hpp>
 
+#include <boost/gil/detail/mp11.hpp>
 #include <boost/gil/io/base.hpp>
 
-#include <boost/mpl/vector.hpp>
+#include <type_traits>
 
 // taken from jpegxx - https://bitbucket.org/edd/jpegxx/src/ea2492a1a4a6/src/ijg_headers.hpp
 #ifndef BOOST_GIL_EXTENSION_IO_TIFF_C_LIB_COMPILED_AS_CPLUSPLUS
@@ -44,7 +45,7 @@ struct tiff_property_base : property_base< T >
     /// this property:
     /// http://www.remotesensing.org/libtiff/man/TIFFGetField.3tiff.html
     /// http://www.remotesensing.org/libtiff/man/TIFFSetField.3tiff.html
-    typedef mpl:: vector <typename property_base <T>:: type> arg_types;
+    using arg_types = mp11::mp_list<typename property_base<unsigned short>::type>;
 };
 
 /// baseline tags
@@ -145,16 +146,17 @@ struct tiff_host_computer : tiff_property_base< std::string, TIFFTAG_HOSTCOMPUTE
 /// Helper structure for reading a color mapper.
 struct tiff_color_map
 {
-   typedef uint16_t* red_t;
-   typedef uint16_t* green_t;
-   typedef uint16_t* blue_t;
+   using red_t = uint16_t *;
+   using green_t = uint16_t *;
+   using blue_t = uint16_t *;
 
    static const unsigned int tag = TIFFTAG_COLORMAP;
 };
 
 /// Defines type for extra samples property.
-struct tiff_extra_samples : tiff_property_base< std:: vector <uint16_t>, TIFFTAG_EXTRASAMPLES > {
-  typedef mpl:: vector <uint16_t, uint16_t const *> arg_types;
+struct tiff_extra_samples : tiff_property_base<std::vector<uint16_t>, TIFFTAG_EXTRASAMPLES>
+{
+    using arg_types = mp11::mp_list<uint16_t, uint16_t const*>;
 };
 
 /// Defines type for copyright property.
@@ -181,17 +183,17 @@ struct tiff_tile_width : tiff_property_base< long, TIFFTAG_TILEWIDTH > {};
 struct tiff_tile_length : tiff_property_base< long, TIFFTAG_TILELENGTH > {};
 
 /// Defines the page to read in a multipage tiff file.
-#include <boost/mpl/integral_c.hpp>
 struct tiff_directory : property_base< tdir_t >
 {
-    typedef boost::mpl::integral_c< type, 0 > default_value;
+    using default_value = std::integral_constant<type, 0>;
 };
 
 /// Non-baseline tags
 
 /// Defines type for icc profile property.
-struct tiff_icc_profile : tiff_property_base< std:: vector <uint8_t>, TIFFTAG_ICCPROFILE > {
-  typedef mpl:: vector <uint32_t, void const *> arg_types;
+struct tiff_icc_profile : tiff_property_base<std::vector<uint8_t>, TIFFTAG_ICCPROFILE>
+{
+    using arg_types = mp11::mp_list<uint32_t, void const*>;
 };
 
 /// Read information for tiff images.

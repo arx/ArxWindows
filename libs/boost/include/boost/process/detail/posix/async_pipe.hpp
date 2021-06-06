@@ -9,6 +9,7 @@
 
 #include <boost/process/detail/posix/basic_pipe.hpp>
 #include <boost/asio/posix/stream_descriptor.hpp>
+#include <boost/asio/post.hpp>
 #include <system_error>
 #include <string>
 #include <utility>
@@ -22,6 +23,7 @@ class async_pipe
 public:
     typedef int native_handle_type;
     typedef ::boost::asio::posix::stream_descriptor handle_type;
+    typedef typename handle_type::executor_type executor_type;
 
     inline async_pipe(boost::asio::io_context & ios) : async_pipe(ios, ios) {}
 
@@ -69,10 +71,8 @@ public:
 
     ~async_pipe()
     {
-        if (_sink .native_handle()  != -1)
-            ::close(_sink.native_handle());
-        if (_source.native_handle() != -1)
-            ::close(_source.native_handle());
+        boost::system::error_code ec;
+        close(ec);
     }
 
     template<class CharT, class Traits = std::char_traits<CharT>>
@@ -109,9 +109,9 @@ public:
     void async_close()
     {
         if (_sink.is_open())
-            _sink.get_io_context().  post([this]{_sink.close();});
+            boost::asio::post(_sink.get_executor(),   [this]{_sink.close();});
         if (_source.is_open())
-            _source.get_io_context().post([this]{_source.close();});
+            boost::asio::post(_source.get_executor(), [this]{_source.close();});
     }
 
     template<typename MutableBufferSequence>
@@ -218,8 +218,8 @@ async_pipe::async_pipe(boost::asio::io_context & ios_source,
 }
 
 async_pipe::async_pipe(const async_pipe & p) :
-        _source(const_cast<async_pipe&>(p)._source.get_io_context()),
-        _sink(  const_cast<async_pipe&>(p)._sink.get_io_context())
+        _source(const_cast<async_pipe&>(p)._source.get_executor()),
+        _sink(  const_cast<async_pipe&>(p)._sink.get_executor())
 {
 
     //cannot get the handle from a const object.

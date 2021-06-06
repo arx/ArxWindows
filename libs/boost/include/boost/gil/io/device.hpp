@@ -8,13 +8,12 @@
 #ifndef BOOST_GIL_IO_DEVICE_HPP
 #define BOOST_GIL_IO_DEVICE_HPP
 
+#include <boost/gil/detail/mp11.hpp>
 #include <boost/gil/io/base.hpp>
-
-#include <boost/core/ignore_unused.hpp>
-#include <boost/utility/enable_if.hpp>
 
 #include <cstdio>
 #include <memory>
+#include <type_traits>
 
 namespace boost { namespace gil {
 
@@ -50,7 +49,7 @@ class file_stream_device
 {
 public:
 
-   typedef FormatTag format_tag_t;
+   using format_tag_t = FormatTag;
 
 public:
 
@@ -62,19 +61,10 @@ public:
     /// Constructor
     ///
     file_stream_device( const std::string& file_name
-                      , read_tag   = read_tag()
+                      , read_tag tag  = read_tag()
                       )
-    {
-        FILE* file = NULL;
-
-        io_error_if( ( file = fopen( file_name.c_str(), "rb" )) == NULL
-                   , "file_stream_device: failed to open file"
-                   );
-
-        _file = file_ptr_t( file
-                          , file_deleter
-                          );
-    }
+        : file_stream_device(file_name.c_str(), tag)
+    {}
 
     ///
     /// Constructor
@@ -83,10 +73,10 @@ public:
                       , read_tag   = read_tag()
                       )
     {
-        FILE* file = NULL;
+        FILE* file = nullptr;
 
-        io_error_if( ( file = fopen( file_name, "rb" )) == NULL
-                   , "file_stream_device: failed to open file"
+        io_error_if( ( file = fopen( file_name, "rb" )) == nullptr
+                   , "file_stream_device: failed to open file for reading"
                    );
 
         _file = file_ptr_t( file
@@ -98,19 +88,10 @@ public:
     /// Constructor
     ///
     file_stream_device( const std::string& file_name
-                      , write_tag
+                      , write_tag tag
                       )
-    {
-        FILE* file = NULL;
-
-        io_error_if( ( file = fopen( file_name.c_str(), "wb" )) == NULL
-                   , "file_stream_device: failed to open file"
-                   );
-
-        _file = file_ptr_t( file
-                          , file_deleter
-                          );
-    }
+        : file_stream_device(file_name.c_str(), tag)
+    {}
 
     ///
     /// Constructor
@@ -119,10 +100,10 @@ public:
                       , write_tag
                       )
     {
-        FILE* file = NULL;
+        FILE* file = nullptr;
 
-        io_error_if( ( file = fopen( file_name, "wb" )) == NULL
-                   , "file_stream_device: failed to open file"
+        io_error_if( ( file = fopen( file_name, "wb" )) == nullptr
+                   , "file_stream_device: failed to open file for writing"
                    );
 
         _file = file_ptr_t( file
@@ -151,8 +132,9 @@ public:
     {
         int ch;
 
-        if(( ch = std::getc( get() )) == EOF )
-            io_error( "file_stream_device: unexpected EOF" );
+        io_error_if( ( ch = std::getc( get() )) == EOF
+                   , "file_stream_device: unexpected EOF"
+                   );
 
         return ( char ) ch;
     }
@@ -169,15 +151,13 @@ public:
                                         );
 
         ///@todo: add compiler symbol to turn error checking on and off.
-        if(ferror( get() ))
-        {
-            assert( false );
-        }
+        io_error_if( ferror( get() )
+                   , "file_stream_device: file read error"
+                   );
 
         //libjpeg sometimes reads blocks in 4096 bytes even when the file is smaller than that.
-        //assert( num_elements == count );
-        assert( num_elements > 0 );
-
+        //return value indicates how much was actually read
+        //returning less than "count" is not an error
         return num_elements;
     }
 
@@ -185,13 +165,15 @@ public:
     template< typename T
             , int      N
             >
-    std::size_t read( T (&buf)[N] )
+    void read( T (&buf)[N] )
     {
-        return read( buf, N );
+        io_error_if( read( buf, N ) < N
+                   , "file_stream_device: file read error"
+                   );
     }
 
     /// Reads byte
-    uint8_t read_uint8() throw()
+    uint8_t read_uint8()
     {
         byte_t m[1];
 
@@ -200,7 +182,7 @@ public:
     }
 
     /// Reads 16 bit little endian integer
-    uint16_t read_uint16() throw()
+    uint16_t read_uint16()
     {
         byte_t m[2];
 
@@ -209,7 +191,7 @@ public:
     }
 
     /// Reads 32 bit little endian integer
-    uint32_t read_uint32() throw()
+    uint32_t read_uint32()
     {
         byte_t m[4];
 
@@ -222,7 +204,6 @@ public:
     std::size_t write( const T*    buf
                      , std::size_t count
                      )
-    throw()
     {
         std::size_t num_elements = fwrite( buf
                                          , buff_item<T>::size
@@ -230,8 +211,8 @@ public:
                                          , get()
                                          );
 
-        assert( num_elements == count );
-
+        //return value indicates how much was actually written
+        //returning less than "count" is not an error
         return num_elements;
     }
 
@@ -239,20 +220,23 @@ public:
     template < typename    T
              , std::size_t N
              >
-    std::size_t write( const T (&buf)[N] ) throw()
+    void write( const T (&buf)[N] )
     {
-        return write( buf, N );
+        io_error_if( write( buf, N ) < N
+                   , "file_stream_device: file write error"
+                   );
+        return ;
     }
 
     /// Writes byte
-    void write_uint8( uint8_t x ) throw()
+    void write_uint8( uint8_t x )
     {
         byte_t m[1] = { x };
         write(m);
     }
 
     /// Writes 16 bit little endian integer
-    void write_uint16( uint16_t x ) throw()
+    void write_uint16( uint16_t x )
     {
         byte_t m[2];
 
@@ -263,7 +247,7 @@ public:
     }
 
     /// Writes 32 bit little endian integer
-    void write_uint32( uint32_t x ) throw()
+    void write_uint32( uint32_t x )
     {
         byte_t m[4];
 
@@ -281,7 +265,7 @@ public:
                           , count
                           , whence
                           ) != 0
-                   , "file read error"
+                   , "file_stream_device: file seek error"
                    );
     }
 
@@ -290,7 +274,7 @@ public:
         long int pos = ftell( get() );
 
         io_error_if( pos == -1L
-                   , "file read error"
+                   , "file_stream_device: file position error"
                    );
 
         return pos;
@@ -310,8 +294,9 @@ public:
                                          , get()
                                          );
 
-        assert( num_elements == line.size() );
-        boost::ignore_unused(num_elements);
+        io_error_if( num_elements < line.size()
+                   , "file_stream_device: line print error"
+                   );
     }
 
     int error()
@@ -345,11 +330,10 @@ public:
    istream_device( std::istream& in )
    : _in( in )
    {
-       if (!in)
-       {
-           // does the file exists?
-           io_error("Stream is not valid.");
-       }
+       // does the file exists?
+       io_error_if( !in
+                  , "istream_device: Stream is not valid."
+                  );
    }
 
     int getc_unchecked()
@@ -361,8 +345,9 @@ public:
     {
         int ch;
 
-        if(( ch = _in.get() ) == EOF )
-            io_error( "file_stream_device: unexpected EOF" );
+        io_error_if( ( ch = _in.get() ) == EOF
+                   , "istream_device: unexpected EOF"
+                   );
 
         return ( char ) ch;
     }
@@ -388,16 +373,14 @@ public:
     }
 
     /// Reads array
-    template< typename T
-            , int      N
-            >
-    size_t read( T (&buf)[N] )
+    template<typename T, int N>
+    void read(T (&buf)[N])
     {
-        return read( buf, N );
+        read(buf, N);
     }
 
     /// Reads byte
-    uint8_t read_uint8() throw()
+    uint8_t read_uint8()
     {
         byte_t m[1];
 
@@ -406,7 +389,7 @@ public:
     }
 
     /// Reads 16 bit little endian integer
-    uint16_t read_uint16() throw()
+    uint16_t read_uint16()
     {
         byte_t m[2];
 
@@ -415,7 +398,7 @@ public:
     }
 
     /// Reads 32 bit little endian integer
-    uint32_t read_uint32() throw()
+    uint32_t read_uint32()
     {
         byte_t m[4];
 
@@ -434,7 +417,7 @@ public:
 
     void write(const byte_t*, std::size_t)
     {
-        io_error( "Bad io error." );
+        io_error( "istream_device: Bad io error." );
     }
 
     void flush() {}
@@ -458,7 +441,7 @@ public:
 
     std::size_t read(byte_t *, std::size_t)
     {
-        io_error( "Bad io error." );
+        io_error( "ostream_device: Bad io error." );
         return 0;
     }
 
@@ -485,20 +468,20 @@ public:
     template < typename    T
              , std::size_t N
              >
-    void write( const T (&buf)[N] ) throw()
+    void write( const T (&buf)[N] )
     {
         write( buf, N );
     }
 
     /// Writes byte
-    void write_uint8( uint8_t x ) throw()
+    void write_uint8( uint8_t x )
     {
         byte_t m[1] = { x };
         write(m);
     }
 
     /// Writes 16 bit little endian integer
-    void write_uint16( uint16_t x ) throw()
+    void write_uint16( uint16_t x )
     {
         byte_t m[2];
 
@@ -509,7 +492,7 @@ public:
     }
 
     /// Writes 32 bit little endian integer
-    void write_uint32( uint32_t x ) throw()
+    void write_uint32( uint32_t x )
     {
         byte_t m[4];
 
@@ -544,28 +527,32 @@ private:
  * Metafunction to detect input devices.
  * Should be replaced by an external facility in the future.
  */
-template< typename IODevice  > struct is_input_device : mpl::false_{};
-template< typename FormatTag > struct is_input_device< file_stream_device< FormatTag > > : mpl::true_{};
-template< typename FormatTag > struct is_input_device<     istream_device< FormatTag > > : mpl::true_{};
+template< typename IODevice  > struct is_input_device : std::false_type{};
+template< typename FormatTag > struct is_input_device< file_stream_device< FormatTag > > : std::true_type{};
+template< typename FormatTag > struct is_input_device<     istream_device< FormatTag > > : std::true_type{};
 
 template< typename FormatTag
         , typename T
         , typename D = void
         >
-struct is_adaptable_input_device : mpl::false_{};
+struct is_adaptable_input_device : std::false_type{};
 
-template< typename FormatTag
-        , typename T
-        >
-struct is_adaptable_input_device< FormatTag
-                                , T
-                                , typename enable_if< mpl::or_< is_base_and_derived< std::istream, T >
-                                                              , is_same            < std::istream, T >
-                                                              >
-                                                    >::type
-                                > : mpl::true_
+template <typename FormatTag, typename T>
+struct is_adaptable_input_device
+<
+    FormatTag,
+    T,
+    typename std::enable_if
+    <
+        mp11::mp_or
+        <
+            std::is_base_of<std::istream, T>,
+            std::is_same<std::istream, T>
+        >::value
+    >::type
+> : std::true_type
 {
-    typedef istream_device< FormatTag > device_type;
+    using device_type = istream_device<FormatTag>;
 };
 
 template< typename FormatTag >
@@ -573,9 +560,9 @@ struct is_adaptable_input_device< FormatTag
                                 , FILE*
                                 , void
                                 >
-    : mpl::true_
+    : std::true_type
 {
-    typedef file_stream_device< FormatTag > device_type;
+    using device_type = file_stream_device<FormatTag>;
 };
 
 ///
@@ -585,56 +572,64 @@ template< typename FormatTag
         , typename T
         , typename D = void
         >
-struct is_read_device : mpl::false_
+struct is_read_device : std::false_type
 {};
 
-template< typename FormatTag
-        , typename T
-        >
-struct is_read_device< FormatTag
-                     , T
-                     , typename enable_if< mpl::or_< is_input_device< FormatTag >
-                                                   , is_adaptable_input_device< FormatTag
-                                                                              , T
-                                                                              >
-                                                   >
-                                         >::type
-                     > : mpl::true_
-{};
+template <typename FormatTag, typename T>
+struct is_read_device
+<
+    FormatTag,
+    T,
+    typename std::enable_if
+    <
+        mp11::mp_or
+        <
+            is_input_device<FormatTag>,
+            is_adaptable_input_device<FormatTag, T>
+        >::value
+    >::type
+> : std::true_type
+{
+};
 
 
 /**
  * Metafunction to detect output devices.
  * Should be replaced by an external facility in the future.
  */
-template<typename IODevice> struct is_output_device : mpl::false_{};
+template<typename IODevice> struct is_output_device : std::false_type{};
 
-template< typename FormatTag > struct is_output_device< file_stream_device< FormatTag > > : mpl::true_{};
-template< typename FormatTag > struct is_output_device< ostream_device    < FormatTag > > : mpl::true_{};
+template< typename FormatTag > struct is_output_device< file_stream_device< FormatTag > > : std::true_type{};
+template< typename FormatTag > struct is_output_device< ostream_device    < FormatTag > > : std::true_type{};
 
 template< typename FormatTag
         , typename IODevice
         , typename D = void
         >
-struct is_adaptable_output_device : mpl::false_ {};
+struct is_adaptable_output_device : std::false_type {};
 
-template< typename FormatTag
-        , typename T
-        > struct is_adaptable_output_device< FormatTag
-                                           , T
-                                           , typename enable_if< mpl::or_< is_base_and_derived< std::ostream, T >
-                                                                         , is_same            < std::ostream, T >
-                                                                         >
-                                           >::type
-        > : mpl::true_
+template <typename FormatTag, typename T>
+struct is_adaptable_output_device
+<
+    FormatTag,
+    T,
+    typename std::enable_if
+    <
+        mp11::mp_or
+        <
+            std::is_base_of<std::ostream, T>,
+            std::is_same<std::ostream, T>
+        >::value
+    >::type
+> : std::true_type
 {
-    typedef ostream_device< FormatTag > device_type;
+    using device_type = ostream_device<FormatTag>;
 };
 
 template<typename FormatTag> struct is_adaptable_output_device<FormatTag,FILE*,void>
-  : mpl::true_
+  : std::true_type
 {
-    typedef file_stream_device< FormatTag > device_type;
+    using device_type = file_stream_device<FormatTag>;
 };
 
 
@@ -645,22 +640,25 @@ template< typename FormatTag
         , typename T
         , typename D = void
         >
-struct is_write_device : mpl::false_
+struct is_write_device : std::false_type
 {};
 
-template< typename FormatTag
-        , typename T
-        >
-struct is_write_device< FormatTag
-                      , T
-                      , typename enable_if< mpl::or_< is_output_device< FormatTag >
-                                                    , is_adaptable_output_device< FormatTag
-                                                                                , T
-                                                                                >
-                                                    >
-                                          >::type
-                      > : mpl::true_
-{};
+template <typename FormatTag, typename T>
+struct is_write_device
+<
+    FormatTag,
+    T,
+    typename std::enable_if
+    <
+        mp11::mp_or
+        <
+            is_output_device<FormatTag>,
+            is_adaptable_output_device<FormatTag, T>
+        >::value
+    >::type
+> : std::true_type
+{
+};
 
 } // namespace detail
 
@@ -676,7 +674,7 @@ template< typename Device, typename FormatTag, typename Log = no_log > class dyn
 namespace detail {
 
 template< typename T >
-struct is_reader : mpl::false_
+struct is_reader : std::false_type
 {};
 
 template< typename Device
@@ -687,11 +685,11 @@ struct is_reader< reader< Device
                         , FormatTag
                         , ConversionPolicy
                         >
-                > : mpl::true_
+                > : std::true_type
 {};
 
 template< typename T >
-struct is_dynamic_image_reader : mpl::false_
+struct is_dynamic_image_reader : std::false_type
 {};
 
 template< typename Device
@@ -700,11 +698,11 @@ template< typename Device
 struct is_dynamic_image_reader< dynamic_image_reader< Device
                                                     , FormatTag
                                                     >
-                              > : mpl::true_
+                              > : std::true_type
 {};
 
 template< typename T >
-struct is_writer : mpl::false_
+struct is_writer : std::false_type
 {};
 
 template< typename Device
@@ -713,11 +711,11 @@ template< typename Device
 struct is_writer< writer< Device
                         , FormatTag
                         >
-                > : mpl::true_
+                > : std::true_type
 {};
 
 template< typename T >
-struct is_dynamic_image_writer : mpl::false_
+struct is_dynamic_image_writer : std::false_type
 {};
 
 template< typename Device
@@ -726,7 +724,7 @@ template< typename Device
 struct is_dynamic_image_writer< dynamic_image_writer< Device
                                                     , FormatTag
                                                     >
-                > : mpl::true_
+                > : std::true_type
 {};
 
 } // namespace detail

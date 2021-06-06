@@ -7,6 +7,8 @@
 #ifndef BOOST_PROCESS_DETAIL_POSIX_SIGCHLD_SERVICE_HPP_
 #define BOOST_PROCESS_DETAIL_POSIX_SIGCHLD_SERVICE_HPP_
 
+#include <boost/asio/dispatch.hpp>
+#include <boost/asio/post.hpp>
 #include <boost/asio/signal_set.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/optional.hpp>
@@ -18,7 +20,7 @@ namespace boost { namespace process { namespace detail { namespace posix {
 
 class sigchld_service : public boost::asio::detail::service_base<sigchld_service>
 {
-    boost::asio::io_context::strand _strand{get_io_context()};
+    boost::asio::strand<boost::asio::io_context::executor_type> _strand{get_io_context().get_executor()};
     boost::asio::signal_set _signal_set{get_io_context(), SIGCHLD};
 
     std::vector<std::pair<::pid_t, std::function<void(int, std::error_code)>>> _receivers;
@@ -36,22 +38,34 @@ public:
     {
         boost::asio::async_completion<
         SignalHandler, void(boost::system::error_code)> init{handler};
+
         auto & h = init.completion_handler;
-        _strand.post(
+        boost::asio::dispatch(
+                _strand,
                 [this, pid, h]
                 {
-                    if (_receivers.empty())
-                        _signal_set.async_wait(
-                                [this](const boost::system::error_code & ec, int)
-                                {
-                                    _strand.post([this,ec]{this->_handle_signal(ec);});
-                                });
-                    _receivers.emplace_back(pid, h);
+                    //check if the child actually is running first
+                    int status;
+                    auto pid_res = ::waitpid(pid, &status, WNOHANG);
+                    if (pid_res < 0)
+                        h(-1, get_last_error());
+                    else if ((pid_res == pid) && (WIFEXITED(status) || WIFSIGNALED(status)))
+                        h(status, {}); //successfully exited already
+                    else //still running
+                    {
+                        if (_receivers.empty())
+                            _signal_set.async_wait(
+                                    [this](const boost::system::error_code &ec, int)
+                                    {
+                                        boost::asio::dispatch(_strand, [this, ec]{this->_handle_signal(ec);});
+                                    });
+                        _receivers.emplace_back(pid, h);
+                    }
                 });
 
         return init.result.get();
     }
-    void shutdown_service() override
+    void shutdown() override
     {
         _receivers.clear();
     }
@@ -104,7 +118,7 @@ void sigchld_service::_handle_signal(const boost::system::error_code & ec)
         _signal_set.async_wait(
             [this](const boost::system::error_code & ec, int)
             {
-                _strand.post([this, ec]{this->_handle_signal(ec);});
+                boost::asio::post(_strand, [this, ec]{this->_handle_signal(ec);});
             });
     }
 }

@@ -2,6 +2,8 @@
 //
 // Copyright (c) 2015, Oracle and/or its affiliates.
 // Contributed and/or modified by Menelaos Karavelas, on behalf of Oracle
+// 
+// Copyright (c) 2020, Debabrata Mandal <mandaldebabrata123@gmail.com>
 //
 // Licensed under the Boost Software License version 1.0.
 // http://www.boost.org/users/license.html
@@ -12,15 +14,12 @@
 //  - Rename include guards
 //  - Remove support for boost::multiprecision types
 //  - Remove support for 128-bit integer types
+//  - Replace mpl meta functions with mp11 equivalents
 //
 #ifndef BOOST_GIL_PROMOTE_INTEGRAL_HPP
 #define BOOST_GIL_PROMOTE_INTEGRAL_HPP
 
-#include <boost/mpl/begin.hpp>
-#include <boost/mpl/deref.hpp>
-#include <boost/mpl/end.hpp>
-#include <boost/mpl/list.hpp>
-#include <boost/mpl/next.hpp>
+#include <boost/mp11/list.hpp>
 
 #include <climits>
 #include <cstddef>
@@ -36,7 +35,7 @@ namespace detail { namespace promote_integral
 template
 <
     typename T,
-    bool IsFundamental = std::is_fundamental<T>::type::value
+    bool IsFundamental = std::is_fundamental<T>::value
 >
 struct bit_size {};
 
@@ -47,36 +46,35 @@ struct bit_size<T, true> : std::integral_constant<std::size_t, (CHAR_BIT * sizeo
 template
 <
     typename T,
-    typename Iterator,
-    typename EndIterator,
+    typename IntegralTypes,
     std::size_t MinSize
 >
 struct promote_to_larger
 {
-    typedef typename boost::mpl::deref<Iterator>::type current_type;
+    using current_type = boost::mp11::mp_first<IntegralTypes>;
+    using list_after_front = boost::mp11::mp_rest<IntegralTypes>;
 
-    typedef typename std::conditional
+    using type = typename std::conditional
         <
-            (bit_size<current_type>::type::value >= MinSize),
+            (bit_size<current_type>::value >= MinSize),
             current_type,
             typename promote_to_larger
                 <
                     T,
-                    typename boost::mpl::next<Iterator>::type,
-                    EndIterator,
+                    list_after_front,
                     MinSize
                 >::type
-        >::type type;
+        >::type;
 };
 
 // The following specialization is required to finish the loop over
 // all list elements
-template <typename T, typename EndIterator, std::size_t MinSize>
-struct promote_to_larger<T, EndIterator, EndIterator, MinSize>
+template <typename T, std::size_t MinSize>
+struct promote_to_larger<T, boost::mp11::mp_list<>, MinSize>
 {
     // if promotion fails, keep the number T
     // (and cross fingers that overflow will not occur)
-    typedef T type;
+    using type = T;
 };
 
 }} // namespace detail::promote_integral
@@ -118,14 +116,14 @@ template
     typename T,
     bool PromoteUnsignedToUnsigned = false,
     bool UseCheckedInteger = false,
-    bool IsIntegral = std::is_integral<T>::type::value
+    bool IsIntegral = std::is_integral<T>::value
 >
 class promote_integral
 {
 private:
-    static bool const is_unsigned = std::is_unsigned<T>::type::value;
+    static bool const is_unsigned = std::is_unsigned<T>::value;
 
-    typedef detail::promote_integral::bit_size<T> bit_size_type;
+    using bit_size_type = detail::promote_integral::bit_size<T>;
 
     // Define the minimum size (in bits) needed for the promoted type
     // If T is the input type and P the promoted type, then the
@@ -134,7 +132,7 @@ private:
     // * if T is unsigned and P is unsigned: 2 * b
     // * if T is signed and P is signed: 2 * b - 1
     // * if T is unsigned and P is signed: 2 * b + 1
-    typedef typename std::conditional
+    using min_bit_size_type = typename std::conditional
         <
             (PromoteUnsignedToUnsigned && is_unsigned),
             std::integral_constant<std::size_t, (2 * bit_size_type::value)>,
@@ -144,46 +142,45 @@ private:
                     std::integral_constant<std::size_t, (2 * bit_size_type::value + 1)>,
                     std::integral_constant<std::size_t, (2 * bit_size_type::value - 1)>
                 >::type
-        >::type min_bit_size_type;
+        >::type;
 
     // Define the list of signed integral types we are going to use
     // for promotion
-    typedef boost::mpl::list
+    using signed_integral_types = boost::mp11::mp_list
         <
             short, int, long
 #if defined(BOOST_HAS_LONG_LONG)
             , boost::long_long_type
 #endif
-        > signed_integral_types;
+        >;
 
     // Define the list of unsigned integral types we are going to use
     // for promotion
-    typedef boost::mpl::list
+    using unsigned_integral_types = boost::mp11::mp_list
         <
             unsigned short, unsigned int, unsigned long, std::size_t
 #if defined(BOOST_HAS_LONG_LONG)
             , boost::ulong_long_type
 #endif
-        > unsigned_integral_types;
+        >;
 
     // Define the list of integral types that will be used for
     // promotion (depending in whether we was to promote unsigned to
     // unsigned or not)
-    typedef typename std::conditional
+    using integral_types = typename std::conditional
         <
             (is_unsigned && PromoteUnsignedToUnsigned),
             unsigned_integral_types,
             signed_integral_types
-        >::type integral_types;
+        >::type;
 
 public:
-    typedef typename detail::promote_integral::promote_to_larger
+    using type = typename detail::promote_integral::promote_to_larger
         <
             T,
-            typename boost::mpl::begin<integral_types>::type,
-            typename boost::mpl::end<integral_types>::type,
+            integral_types,
             min_bit_size_type::value
-        >::type type;
+        >::type;
 };
 
 
@@ -194,7 +191,7 @@ class promote_integral
     >
 {
 public:
-    typedef T type;
+    using type = T;
 };
 
 }} // namespace boost::gil

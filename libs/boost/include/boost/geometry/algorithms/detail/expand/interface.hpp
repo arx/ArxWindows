@@ -5,11 +5,12 @@
 // Copyright (c) 2009-2015 Mateusz Loskot, London, UK.
 // Copyright (c) 2014-2015 Samuel Debionne, Grenoble, France.
 
-// This file was modified by Oracle on 2015, 2016.
-// Modifications copyright (c) 2015-2016, Oracle and/or its affiliates.
+// This file was modified by Oracle on 2015-2020.
+// Modifications copyright (c) 2015-2020, Oracle and/or its affiliates.
 
 // Contributed and/or modified by Vissarion Fysikopoulos, on behalf of Oracle
 // Contributed and/or modified by Menelaos Karavelas, on behalf of Oracle
+// Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -25,16 +26,19 @@
 #include <boost/variant/static_visitor.hpp>
 #include <boost/variant/variant_fwd.hpp>
 
+#include <boost/geometry/core/coordinate_system.hpp>
+#include <boost/geometry/core/tag.hpp>
+#include <boost/geometry/core/tags.hpp>
+
 #include <boost/geometry/geometries/concepts/check.hpp>
 
 #include <boost/geometry/algorithms/dispatch/expand.hpp>
 
 #include <boost/geometry/strategies/default_strategy.hpp>
+#include <boost/geometry/strategies/detail.hpp>
+#include <boost/geometry/strategies/expand/services.hpp>
+#include <boost/geometry/strategy/expand.hpp>
 
-#include <boost/geometry/strategies/envelope.hpp>
-#include <boost/geometry/strategies/cartesian/envelope_segment.hpp>
-#include <boost/geometry/strategies/spherical/envelope_segment.hpp>
-#include <boost/geometry/strategies/geographic/envelope_segment.hpp>
 
 namespace boost { namespace geometry
 {
@@ -42,30 +46,50 @@ namespace boost { namespace geometry
 namespace resolve_strategy
 {
 
-template <typename Geometry>
+template
+<
+    typename Strategy,
+    bool IsUmbrella = strategies::detail::is_umbrella_strategy<Strategy>::value
+>
 struct expand
 {
-    template <typename Box, typename Strategy>
+    template <typename Box, typename Geometry>
     static inline void apply(Box& box,
                              Geometry const& geometry,
                              Strategy const& strategy)
     {
         dispatch::expand<Box, Geometry>::apply(box, geometry, strategy);
     }
+};
 
-    template <typename Box>
+template <typename Strategy>
+struct expand<Strategy, false>
+{
+    template <typename Box, typename Geometry>
+    static inline void apply(Box& box,
+                             Geometry const& geometry,
+                             Strategy const& strategy)
+    {
+        using strategies::expand::services::strategy_converter;
+        dispatch::expand
+            <
+                Box, Geometry
+            >::apply(box, geometry, strategy_converter<Strategy>::get(strategy));
+    }
+};
+
+template <>
+struct expand<default_strategy, false>
+{
+    template <typename Box, typename Geometry>
     static inline void apply(Box& box,
                              Geometry const& geometry,
                              default_strategy)
     {
-        typedef typename point_type<Geometry>::type point_type;
-        typedef typename coordinate_type<point_type>::type coordinate_type;
-
-        typedef typename strategy::envelope::services::default_strategy
-                <
-                typename cs_tag<point_type>::type,
-                coordinate_type
-                >::type strategy_type;
+        typedef typename strategies::expand::services::default_strategy
+            <
+                Box, Geometry
+            >::type strategy_type;
 
         dispatch::expand<Box, Geometry>::apply(box, geometry, strategy_type());
     }
@@ -89,7 +113,7 @@ struct expand
         concepts::check<Geometry const>();
         concepts::check_concepts_and_equal_dimensions<Box, Geometry const>();
         
-        resolve_strategy::expand<Geometry>::apply(box, geometry, strategy);
+        resolve_strategy::expand<Strategy>::apply(box, geometry, strategy);
     }
 };
 
@@ -172,7 +196,6 @@ will be added to the box
 template <typename Box, typename Geometry, typename Strategy>
 inline void expand(Box& box, Geometry const& geometry, Strategy const& strategy)
 {
-
     resolve_variant::expand<Geometry>::apply(box, geometry, strategy);
 }
 

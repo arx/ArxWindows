@@ -1,10 +1,5 @@
-#ifndef BOOST_NUMERIC_NATIVE_HPP
-#define BOOST_NUMERIC_NATIVE_HPP
-
-// MS compatible compilers support #pragma once
-#if defined(_MSC_VER) && (_MSC_VER >= 1020)
-# pragma once
-#endif
+#ifndef BOOST_SAFE_NUMERICS_NATIVE_HPP
+#define BOOST_SAFE_NUMERICS_NATIVE_HPP
 
 //  Copyright (c) 2012 Robert Ramey
 //
@@ -112,4 +107,4 @@ public:
 } // safe_numerics
 } // boost
 
-#endif // BOOST_NUMERIC_NATIVE_HPP
+#endif // BOOST_SAFE_NUMERICS_NATIVE_HPP

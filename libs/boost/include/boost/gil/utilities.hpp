@@ -8,15 +8,30 @@
 #ifndef BOOST_GIL_UTILITIES_HPP
 #define BOOST_GIL_UTILITIES_HPP
 
-#include <boost/mpl/begin.hpp>
-#include <boost/mpl/distance.hpp>
-#include <boost/mpl/find.hpp>
-#include <boost/mpl/range_c.hpp>
-#include <boost/mpl/size.hpp>
+#include <boost/gil/detail/mp11.hpp>
+
+#include <boost/config.hpp>
+
+#if defined(BOOST_CLANG)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wconversion"
+#endif
+
+#if defined(BOOST_GCC) && (BOOST_GCC >= 40900)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+#endif
+
 #include <boost/iterator/iterator_adaptor.hpp>
 #include <boost/iterator/iterator_facade.hpp>
-#include <boost/static_assert.hpp>
-#include <boost/type_traits.hpp>
+
+#if defined(BOOST_CLANG)
+#pragma clang diagnostic pop
+#endif
+
+#if defined(BOOST_GCC) && (BOOST_GCC >= 40900)
+#pragma GCC diagnostic pop
+#endif
 
 #include <algorithm>
 #include <cmath>
@@ -24,6 +39,7 @@
 #include <functional>
 #include <iterator>
 #include <utility>
+#include <type_traits>
 
 namespace boost { namespace gil {
 
@@ -89,36 +105,36 @@ template
 >
 struct deref_base
 {
-    typedef ArgType        argument_type;
-    typedef ResultType     result_type;
-    typedef ConstT         const_t;
-    typedef Value          value_type;
-    typedef Reference      reference;
-    typedef ConstReference const_reference;
-    BOOST_STATIC_CONSTANT(bool, is_mutable = IsMutable);
+    using argument_type = ArgType;
+    using result_type = ResultType;
+    using const_t = ConstT;
+    using value_type = Value;
+    using reference = Reference;
+    using const_reference = ConstReference;
+    static constexpr bool is_mutable = IsMutable;
 };
 
-/// \brief Composes two dereference function objects. Similar to std::unary_compose but needs to pull some typedefs from the component types.  Models: PixelDereferenceAdaptorConcept
+/// \brief Composes two dereference function objects. Similar to std::unary_compose but needs to pull some aliases from the component types.  Models: PixelDereferenceAdaptorConcept
 /// \ingroup PixelDereferenceAdaptorModel
 ///
 template <typename D1, typename D2>
 class deref_compose : public deref_base
 <
-      deref_compose<typename D1::const_t, typename D2::const_t>,
-      typename D1::value_type,
-      typename D1::reference,
-      typename D1::const_reference,
-      typename D2::argument_type,
-      typename D1::result_type,
-      D1::is_mutable && D2::is_mutable
+    deref_compose<typename D1::const_t, typename D2::const_t>,
+    typename D1::value_type,
+    typename D1::reference,
+    typename D1::const_reference,
+    typename D2::argument_type,
+    typename D1::result_type,
+    D1::is_mutable && D2::is_mutable
 >
 {
 public:
     D1 _fn1;
     D2 _fn2;
 
-    typedef typename D2::argument_type   argument_type;
-    typedef typename D1::result_type     result_type;
+    using argument_type = typename D2::argument_type;
+    using result_type = typename D1::result_type;
 
     deref_compose() = default;
     deref_compose(const D1& x, const D2& y) : _fn1(x), _fn2(y) {}
@@ -192,17 +208,17 @@ copy_n(InputIter first, Size count, OutputIter result)
 template <typename T>
 struct identity
 {
-    typedef T argument_type;
-    typedef T result_type;
+    using argument_type = T;
+    using result_type = T;
     const T& operator()(const T& val) const { return val; }
 };
 
 /// \brief plus function object whose arguments may be of different type.
 template <typename T1, typename T2>
 struct plus_asymmetric {
-    typedef T1 first_argument_type;
-    typedef T2 second_argument_type;
-    typedef T1 result_type;
+    using first_argument_type = T1;
+    using second_argument_type = T2;
+    using result_type = T1;
     T1 operator()(T1 f1, T2 f2) const
     {
         return f1+f2;
@@ -213,8 +229,8 @@ struct plus_asymmetric {
 template <typename T>
 struct inc
 {
-    typedef T argument_type;
-    typedef T result_type;
+    using argument_type = T;
+    using result_type = T;
     T operator()(T x) const { return ++x; }
 };
 
@@ -222,35 +238,43 @@ struct inc
 template <typename T>
 struct dec
 {
-    typedef T argument_type;
-    typedef T result_type;
+    using argument_type = T;
+    using result_type = T;
     T operator()(T x) const { return --x; }
 };
 
 /// \brief Returns the index corresponding to the first occurrance of a given given type in
-//         a given MPL RandomAccessSequence (or size if the type is not present)
+//         a given Boost.MP11-compatible list (or size if the type is not present)
 template <typename Types, typename T>
-struct type_to_index
-    : public mpl::distance
-        <
-            typename mpl::begin<Types>::type,
-            typename mpl::find<Types,T>::type
-        >::type
-    {
-    };
+struct type_to_index : mp11::mp_find<Types, T>
+{
+    static_assert(mp11::mp_contains<Types, T>::value, "T should be element of Types");
+};
+
 } // namespace detail
 
 /// \ingroup ColorSpaceAndLayoutModel
 /// \brief Represents a color space and ordering of channels in memory
-template <typename ColorSpace, typename ChannelMapping = mpl::range_c<int,0,mpl::size<ColorSpace>::value>>
+template
+<
+    typename ColorSpace,
+    typename ChannelMapping = mp11::mp_iota
+    <
+        std::integral_constant<int, mp11::mp_size<ColorSpace>::value>
+    >
+>
 struct layout
 {
-    typedef ColorSpace      color_space_t;
-    typedef ChannelMapping  channel_mapping_t;
+    using color_space_t = ColorSpace;
+    using channel_mapping_t = ChannelMapping;
+
+    static_assert(mp11::mp_size<ColorSpace>::value > 0,
+        "color space should not be empty sequence");
 };
 
 /// \brief A version of swap that also works with reference proxy objects
-template <typename Value, typename T1, typename T2> // where value_type<T1>  == value_type<T2> == Value
+/// Where value_type<T1>  == value_type<T2> == Value
+template <typename Value, typename T1, typename T2>
 void swap_proxy(T1& left, T2& right)
 {
     Value tmp = left;

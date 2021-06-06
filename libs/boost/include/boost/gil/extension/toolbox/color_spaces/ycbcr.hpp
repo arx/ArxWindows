@@ -1,4 +1,4 @@
-﻿//
+//
 // Copyright 2013 Juan V. Puertos G-Cluster, Christian Henning
 //
 // Distributed under the Boost Software License, Version 1.0
@@ -10,15 +10,16 @@
 
 #include <boost/gil/extension/toolbox/metafunctions/get_num_bits.hpp>
 
+#include <boost/gil/color_convert.hpp>
 #include <boost/gil.hpp> // FIXME: Include what you use!
+#include <boost/gil/detail/mp11.hpp>
 
-#include <boost/mpl/identity.hpp>
-#include <boost/mpl/range_c.hpp>
-#include <boost/mpl/vector_c.hpp>
+#include <boost/config.hpp>
 
 #include <cstdint>
+#include <type_traits>
 
-namespace boost{ namespace gil {
+namespace boost { namespace gil {
 
 /// \addtogroup ColorNameModel
 /// \{
@@ -44,24 +45,38 @@ struct cr_t {};
 /// \}
 
 /// \ingroup ColorSpaceModel
-typedef boost::mpl::vector3< ycbcr_601_color_space::y_t, ycbcr_601_color_space::cb_t, ycbcr_601_color_space::cr_t > ycbcr_601__t;
-typedef boost::mpl::vector3< ycbcr_709_color_space::y_t, ycbcr_709_color_space::cb_t, ycbcr_709_color_space::cr_t > ycbcr_709__t;
+using ycbcr_601__t = mp11::mp_list
+<
+    ycbcr_601_color_space::y_t,
+    ycbcr_601_color_space::cb_t,
+    ycbcr_601_color_space::cr_t
+>;
+
+/// \ingroup ColorSpaceModel
+using ycbcr_709__t = mp11::mp_list
+<
+    ycbcr_709_color_space::y_t,
+    ycbcr_709_color_space::cb_t,
+    ycbcr_709_color_space::cr_t
+>;
 
 /// \ingroup LayoutModel
-typedef boost::gil::layout<ycbcr_601__t> ycbcr_601__layout_t;
-typedef boost::gil::layout<ycbcr_709__t> ycbcr_709__layout_t;
+using ycbcr_601__layout_t = boost::gil::layout<ycbcr_601__t>;
+using ycbcr_709__layout_t = boost::gil::layout<ycbcr_709__t>;
 
 //The channel depth is ALWAYS 8bits ofr YCbCr!
-GIL_DEFINE_ALL_TYPEDEFS(8, uint8_t, ycbcr_601_)
-GIL_DEFINE_ALL_TYPEDEFS(8, uint8_t, ycbcr_709_)
+BOOST_GIL_DEFINE_ALL_TYPEDEFS(8, uint8_t, ycbcr_601_)
+BOOST_GIL_DEFINE_ALL_TYPEDEFS(8, uint8_t, ycbcr_709_)
 
 namespace detail {
 
 // Source:boost/algorithm/clamp.hpp
 template<typename T>
-constexpr T const& clamp(T const& val,
-    typename boost::mpl::identity<T>::type const & lo,
-    typename boost::mpl::identity<T>::type const & hi)
+BOOST_CXX14_CONSTEXPR
+T const& clamp(
+    T const& val,
+    typename boost::mp11::mp_identity<T>::type const & lo,
+    typename boost::mp11::mp_identity<T>::type const & hi)
 {
     // assert ( !p ( hi, lo )); // Can't assert p ( lo, hi ) b/c they might be equal
     auto const p = std::less<T>();
@@ -87,12 +102,12 @@ struct default_color_converter_impl<ycbcr_601__t, rgb_t>
 	template < typename SRCP, typename DSTP >
 	void operator()( const SRCP& src, DSTP& dst ) const
 	{
-        typedef typename channel_type< DSTP >::type dst_channel_t;
-        convert( src, dst
-               , typename boost::is_same< typename mpl::int_< sizeof( dst_channel_t ) >::type
-                                        , typename mpl::int_<1>::type
-                                        >::type()
-               );
+        using dst_channel_t = typename channel_type<DSTP>::type;
+        convert(src, dst, typename std::is_same
+            <
+                std::integral_constant<int, sizeof(dst_channel_t)>,
+                std::integral_constant<int, 1>
+            >::type());
 	}
 
 private:
@@ -103,13 +118,13 @@ private:
             >
     void convert( const Src_Pixel& src
                 ,       Dst_Pixel& dst
-                , mpl::true_ // is 8 bit channel
+                , std::true_type // is 8 bit channel
                 ) const
     {
         using namespace ycbcr_601_color_space;
 
-        typedef typename channel_type< Src_Pixel >::type src_channel_t;
-        typedef typename channel_type< Dst_Pixel >::type dst_channel_t;
+        using src_channel_t = typename channel_type<Src_Pixel>::type;
+        using dst_channel_t = typename channel_type<Dst_Pixel>::type;
 
 		src_channel_t y  = channel_convert<src_channel_t>( get_color(src,  y_t()));
 		src_channel_t cb = channel_convert<src_channel_t>( get_color(src, cb_t()));
@@ -134,12 +149,12 @@ private:
             >
     void convert( const Src_Pixel& src
                 ,       Dst_Pixel& dst
-                , mpl::false_ // is 8 bit channel
+                , std::false_type // is 8 bit channel
                 ) const
     {
         using namespace ycbcr_601_color_space;
 
-        typedef typename channel_type< Dst_Pixel >::type dst_channel_t;
+        using dst_channel_t = typename channel_type<Dst_Pixel>::type;
 
         double  y = get_color( src,  y_t() );
         double cb = get_color( src, cb_t() );
@@ -158,7 +173,7 @@ private:
 
 /*
  * Source: http://en.wikipedia.org/wiki/YCbCr#ITU-R_BT.601_conversion
- * digital Y′CbCr derived from digital R'dG'dB'd 8 bits per sample, each using the full range.
+ * digital Y'CbCr derived from digital R'dG'dB'd 8 bits per sample, each using the full range.
  * with NO footroom wither headroom.
  */
 /**
@@ -172,8 +187,8 @@ struct default_color_converter_impl<rgb_t, ycbcr_601__t>
 	{
         using namespace ycbcr_601_color_space;
 
-        typedef typename channel_type< SRCP >::type src_channel_t;
-        typedef typename channel_type< DSTP >::type dst_channel_t;
+        using src_channel_t = typename channel_type<SRCP>::type;
+        using dst_channel_t = typename channel_type<DSTP>::type;
 
 		src_channel_t red   = channel_convert<src_channel_t>( get_color(src,   red_t()));
 		src_channel_t green = channel_convert<src_channel_t>( get_color(src, green_t()));
@@ -200,8 +215,8 @@ struct default_color_converter_impl<rgb_t, ycbcr_709__t>
 	{
         using namespace ycbcr_709_color_space;
 
-        typedef typename channel_type< SRCP >::type src_channel_t;
-        typedef typename channel_type< DSTP >::type dst_channel_t;
+        using src_channel_t = typename channel_type<SRCP>::type;
+        using dst_channel_t = typename channel_type<DSTP>::type;
 
 		src_channel_t red   = channel_convert<src_channel_t>( get_color(src,   red_t()));
 		src_channel_t green = channel_convert<src_channel_t>( get_color(src, green_t()));
@@ -228,8 +243,8 @@ struct default_color_converter_impl<ycbcr_709__t, rgb_t>
 	{
         using namespace ycbcr_709_color_space;
 
-        typedef typename channel_type< SRCP >::type src_channel_t;
-        typedef typename channel_type< DSTP >::type dst_channel_t;
+        using src_channel_t = typename channel_type<SRCP>::type;
+        using dst_channel_t = typename channel_type<DSTP>::type;
 
 		src_channel_t y           = channel_convert<src_channel_t>( get_color(src,  y_t())       );
 		src_channel_t cb_clipped  = channel_convert<src_channel_t>( get_color(src, cb_t()) - 128 );

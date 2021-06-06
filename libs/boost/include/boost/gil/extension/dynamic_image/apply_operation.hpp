@@ -8,46 +8,34 @@
 #ifndef BOOST_GIL_EXTENSION_DYNAMIC_IMAGE_APPLY_OPERATION_HPP
 #define BOOST_GIL_EXTENSION_DYNAMIC_IMAGE_APPLY_OPERATION_HPP
 
-#include <boost/gil/extension/dynamic_image/apply_operation_base.hpp>
-#include <boost/gil/extension/dynamic_image/variant.hpp>
-
-#ifdef BOOST_GIL_DOXYGEN_ONLY
-#undef BOOST_GIL_REDUCE_CODE_BLOAT
-#endif
-
-// Implements apply_operation for variants.
-// Optionally performs type reduction.
-#ifdef BOOST_GIL_REDUCE_CODE_BLOAT
-
-#include <boost/gil/extension/dynamic_image/reduce.hpp>
-
-#else
+#include <boost/variant2/variant.hpp>
 
 namespace boost { namespace gil {
 
 /// \ingroup Variant
-/// \brief Invokes a generic mutable operation (represented as a unary function object) on a variant
-template <typename Types, typename UnaryOp> BOOST_FORCEINLINE
-typename UnaryOp::result_type apply_operation(variant<Types>& arg, UnaryOp op) {
-    return apply_operation_base<Types>(arg._bits, arg._index ,op);
+/// \brief Applies the visitor op to the variants
+template <typename Variant1, typename Visitor>
+BOOST_FORCEINLINE
+auto apply_operation(Variant1&& arg1, Visitor&& op)
+#if defined(BOOST_NO_CXX14_DECLTYPE_AUTO) || defined(BOOST_NO_CXX11_DECLTYPE_N3276)
+    -> decltype(variant2::visit(std::forward<Visitor>(op), std::forward<Variant1>(arg1)))
+#endif
+{
+    return variant2::visit(std::forward<Visitor>(op), std::forward<Variant1>(arg1));
 }
 
 /// \ingroup Variant
-/// \brief Invokes a generic constant operation (represented as a unary function object) on a variant
-template <typename Types, typename UnaryOp> BOOST_FORCEINLINE
-typename UnaryOp::result_type apply_operation(const variant<Types>& arg, UnaryOp op) {
-    return apply_operation_basec<Types>(arg._bits, arg._index ,op);
-}
-
-/// \ingroup Variant
-/// \brief Invokes a generic constant operation (represented as a binary function object) on two variants
-template <typename Types1, typename Types2, typename BinaryOp> BOOST_FORCEINLINE
-typename BinaryOp::result_type apply_operation(const variant<Types1>& arg1, const variant<Types2>& arg2, BinaryOp op) {    
-    return apply_operation_base<Types1,Types2>(arg1._bits, arg1._index, arg2._bits, arg2._index, op);
+/// \brief Applies the visitor op to the variants
+template <typename Variant1, typename Variant2, typename Visitor>
+BOOST_FORCEINLINE
+auto apply_operation(Variant1&& arg1, Variant2&& arg2, Visitor&& op)
+#if defined(BOOST_NO_CXX14_DECLTYPE_AUTO) || defined(BOOST_NO_CXX11_DECLTYPE_N3276)
+    -> decltype(variant2::visit(std::forward<Visitor>(op), std::forward<Variant1>(arg1), std::forward<Variant2>(arg2)))
+#endif
+{
+    return variant2::visit(std::forward<Visitor>(op), std::forward<Variant1>(arg1), std::forward<Variant2>(arg2));
 }
 
 }}  // namespace boost::gil
-
-#endif // defined(BOOST_GIL_REDUCE_CODE_BLOAT)
 
 #endif

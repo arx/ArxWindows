@@ -4,8 +4,8 @@
 // Copyright (c) 2008-2015 Bruno Lalande, Paris, France.
 // Copyright (c) 2009-2015 Mateusz Loskot, London, UK.
 
-// This file was modified by Oracle on 2015, 2016, 2017.
-// Modifications copyright (c) 2015-2017, Oracle and/or its affiliates.
+// This file was modified by Oracle on 2015-2020.
+// Modifications copyright (c) 2015-2020, Oracle and/or its affiliates.
 
 // Contributed and/or modified by Vissarion Fysikopoulos, on behalf of Oracle
 // Contributed and/or modified by Menelaos Karavelas, on behalf of Oracle
@@ -21,19 +21,26 @@
 #ifndef BOOST_GEOMETRY_ALGORITHMS_DETAIL_ENVELOPE_INTERFACE_HPP
 #define BOOST_GEOMETRY_ALGORITHMS_DETAIL_ENVELOPE_INTERFACE_HPP
 
+
 #include <boost/variant/apply_visitor.hpp>
 #include <boost/variant/static_visitor.hpp>
 #include <boost/variant/variant_fwd.hpp>
 
-#include <boost/geometry/geometries/concepts/check.hpp>
-
 #include <boost/geometry/algorithms/dispatch/envelope.hpp>
 
+#include <boost/geometry/core/coordinate_system.hpp>
+#include <boost/geometry/core/tag.hpp>
+#include <boost/geometry/core/tags.hpp>
+
+#include <boost/geometry/geometries/concepts/check.hpp>
+
 #include <boost/geometry/strategies/default_strategy.hpp>
-#include <boost/geometry/strategies/envelope.hpp>
-#include <boost/geometry/strategies/cartesian/envelope_segment.hpp>
-#include <boost/geometry/strategies/spherical/envelope_segment.hpp>
-#include <boost/geometry/strategies/geographic/envelope_segment.hpp>
+#include <boost/geometry/strategies/detail.hpp>
+#include <boost/geometry/strategies/envelope/services.hpp>
+#include <boost/geometry/strategy/envelope.hpp>
+
+#include <boost/geometry/util/select_most_precise.hpp>
+
 
 namespace boost { namespace geometry
 {
@@ -41,29 +48,49 @@ namespace boost { namespace geometry
 namespace resolve_strategy
 {
 
-template <typename Geometry>
+template
+<
+    typename Strategy,
+    bool IsUmbrella = strategies::detail::is_umbrella_strategy<Strategy>::value
+>
 struct envelope
 {
-    template <typename Box, typename Strategy>
+    template <typename Geometry, typename Box>
     static inline void apply(Geometry const& geometry,
                              Box& box,
                              Strategy const& strategy)
     {
         dispatch::envelope<Geometry>::apply(geometry, box, strategy);
     }
+};
 
-    template <typename Box>
+template <typename Strategy>
+struct envelope<Strategy, false>
+{
+    template <typename Geometry, typename Box>
+    static inline void apply(Geometry const& geometry,
+                             Box& box,
+                             Strategy const& strategy)
+    {
+        using strategies::envelope::services::strategy_converter;
+        return dispatch::envelope
+            <
+                Geometry
+            >::apply(geometry, box, strategy_converter<Strategy>::get(strategy));
+    }
+};
+
+template <>
+struct envelope<default_strategy, false>
+{
+    template <typename Geometry, typename Box>
     static inline void apply(Geometry const& geometry,
                              Box& box,
                              default_strategy)
     {
-        typedef typename point_type<Geometry>::type point_type;
-        typedef typename coordinate_type<point_type>::type coordinate_type;
-
-        typedef typename strategy::envelope::services::default_strategy
+        typedef typename strategies::envelope::services::default_strategy
             <
-                typename cs_tag<point_type>::type,
-                coordinate_type
+                Geometry, Box
             >::type strategy_type;
 
         dispatch::envelope<Geometry>::apply(geometry, box, strategy_type());
@@ -86,7 +113,7 @@ struct envelope
         concepts::check<Geometry const>();
         concepts::check<Box>();
 
-        resolve_strategy::envelope<Geometry>::apply(geometry, box, strategy);
+        resolve_strategy::envelope<Strategy>::apply(geometry, box, strategy);
     }
 };
 
@@ -123,6 +150,7 @@ struct envelope<boost::variant<BOOST_VARIANT_ENUM_PARAMS(T)> >
 };
 
 } // namespace resolve_variant
+
 
 /*!
 \brief \brief_calc{envelope (with strategy)}

@@ -17,11 +17,9 @@
 #include <boost/gil/io/error.hpp>
 #include <boost/gil/io/typedefs.hpp>
 
-#include <boost/bind.hpp>
-#include <boost/type_traits/is_base_of.hpp>
-
 #include <istream>
 #include <ostream>
+#include <type_traits>
 #include <vector>
 
 namespace boost { namespace gil {
@@ -31,12 +29,11 @@ struct format_tag {};
 template< typename Property >
 struct property_base
 {
-    typedef Property type;
+    using type = Property;
 };
 
-template<typename FormatTag> struct is_format_tag : is_base_and_derived< format_tag
-                                                                       , FormatTag
-                                                                       > {};
+template<typename FormatTag>
+struct is_format_tag : std::is_base_of<format_tag, FormatTag> {};
 
 struct image_read_settings_base
 {
@@ -72,7 +69,7 @@ public:
 };
 
 /**
- * Boolean meta function, mpl::true_ if the pixel type \a PixelType is supported
+ * Boolean meta function, std::true_type if the pixel type \a PixelType is supported
  * by the image format identified with \a FormatTag.
  * \todo the name is_supported is to generic, pick something more IO realted.
  */
@@ -87,15 +84,15 @@ namespace detail {
 template< typename Property >
 struct property_base
 {
-    typedef Property type;
+    using type = Property;
 };
 
 } // namespace detail
 
-struct read_support_true  { BOOST_STATIC_CONSTANT( bool, is_supported = true  ); };
-struct read_support_false { BOOST_STATIC_CONSTANT( bool, is_supported = false ); };
-struct write_support_true { BOOST_STATIC_CONSTANT( bool, is_supported = true  ); };
-struct write_support_false{ BOOST_STATIC_CONSTANT( bool, is_supported = false ); };
+struct read_support_true  { static constexpr bool is_supported = true; };
+struct read_support_false { static constexpr bool is_supported = false; };
+struct write_support_true { static constexpr bool is_supported = true; };
+struct write_support_false{ static constexpr bool is_supported = false; };
 
 class no_log {};
 
