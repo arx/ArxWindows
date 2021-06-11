@@ -42,8 +42,8 @@ Additionally, you'll need the following libraries to build the Crash Reporter:
 4. Generating the project files
 
        cd /c/Code/git/ArxWindows
-       mkdir build_vc15
-       cd build_vc15
+       mkdir build
+       cd build
        cmake .. -G "Visual Studio 15 2017"
 
    Replace `"Visual Studio 15 2017"` with the desired [CMake generator name](https://cmake.org/cmake/help/latest/manual/cmake-generators.7.html), for example `"Visual Studio 15 2017 Win64"` for 64-bit builds.
