@@ -47,5 +47,12 @@ Additionally, you'll need the following libraries to build the Crash Reporter:
        cmake .. -G "Visual Studio 15 2017"
 
    Replace `"Visual Studio 15 2017"` with the desired [CMake generator name](https://cmake.org/cmake/help/latest/manual/cmake-generators.7.html), for example `"Visual Studio 15 2017 Win64"` for 64-bit builds.
+   Starting with CMake 3.1 the architecture should be specified seperately
+   
+       cmake .. -G "Visual Studio 16 2019" -A x64
+       
+   Valid Architectures are Win32, x64, ARM and ARM64. If you intend to use Visual Studios incremental builds, add -DDEVELOPER=1 to the command
+   
+       cmake .. -G "Visual Studio 16 2019" -A x64 -DDEVELOPER=1
 
 5. Build the generated solution in Visual Studio
