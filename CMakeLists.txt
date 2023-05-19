@@ -1,6 +1,5 @@
-project(ArxWindows)
-
 cmake_minimum_required(VERSION 2.8.5...3.19)
+project(ArxWindows)
 
 # Change CMAKE_LIBRARY_ARCHITECTURE to ensure the right libs are used
 if(CMAKE_CL_64)
